@@ -1,5 +1,14 @@
+
 {
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://chatbox-confab.onrender.com"
+    },
+    {
+      "source": "/uploads/(.*)",
+      "destination": "https://chatbox-confab.onrender.com"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

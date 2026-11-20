@@ -1,5 +1,11 @@
 import os
+from pathlib import Path
 from typing import List
+from dotenv import load_dotenv
+
+# Load .env file from backend directory or project root
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 class Settings:
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "CONFAB")

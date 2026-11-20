@@ -65,18 +65,23 @@ app.include_router(calls_router, prefix=settings.API_V1_STR)
 app.include_router(polls_router, prefix=settings.API_V1_STR)
 app.include_router(uploads_router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-async def root():
-    return {
-        "app": "CONFAB",
-        "tagline": "Connect Beyond Conversations",
-        "version": "1.0.0",
-        "status": "online"
-    }
-
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "service": "Confab Backend API"}
+
+# Check if frontend production build exists and serve it
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "app": "CONFAB",
+            "tagline": "Connect Beyond Conversations",
+            "version": "1.0.0",
+            "status": "online"
+        }
 
 # Mount Socket.IO to ASGI application
 combined_asgi_app = socketio.ASGIApp(

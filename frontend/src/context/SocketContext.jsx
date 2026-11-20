@@ -23,7 +23,8 @@ export function SocketProvider({ children }) {
     }
 
     // Connect to Socket.IO backend
-    const s = io('/', {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || '/';
+    const s = io(socketUrl, {
       auth: { token },
       path: '/socket.io',
       transports: ['websocket', 'polling'],

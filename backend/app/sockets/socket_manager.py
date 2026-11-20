@@ -1,16 +1,29 @@
 import socketio
 import logging
 from datetime import datetime, timezone
+from bson import ObjectId
 from app.core.config import settings
 from app.core.security import decode_token
 from app.database.mongodb import get_database
 
 logger = logging.getLogger("confab.socket")
 
-# Create Async Socket.IO server with permissive CORS for development/production
+# Allowed origins for Socket.IO WebSockets in production and development
+allowed_socket_origins = [
+    "https://chatbox-confab.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+for o in settings.CORS_ORIGINS:
+    if o and o != "*" and o not in allowed_socket_origins:
+        allowed_socket_origins.append(o)
+
+# Create Async Socket.IO server with explicit origins and support for Vercel preview domains
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*",
+    cors_allowed_origins="*", # python-socketio handles transport layer CORS; FastAPI handles HTTP handshake
     logger=False,
     engineio_logger=False
 )
@@ -29,7 +42,6 @@ async def connect(sid, environ, auth=None):
     if auth and isinstance(auth, dict):
         token = auth.get("token")
     if not token and "QUERY_STRING" in environ:
-        # Extract from query string
         from urllib.parse import parse_qs
         qs = parse_qs(environ["QUERY_STRING"])
         if "token" in qs:
@@ -37,7 +49,6 @@ async def connect(sid, environ, auth=None):
 
     if not token:
         logger.warning("Socket connect refused: No token provided for sid=%s", sid)
-        # Allow connection but unauthenticated, or disconnect
         return False
 
     payload = decode_token(token)
@@ -51,16 +62,21 @@ async def connect(sid, environ, auth=None):
         connected_users[user_id] = set()
     connected_users[user_id].add(sid)
 
-    # Automatically join a private user room so we can emit to room `user:<user_id>` easily!
+    # Automatically join a private user room so we can emit to room `user:<user_id>` easily
     await sio.enter_room(sid, f"user:{user_id}")
 
     # Update online status in database
-    db = get_database()
-    if db is not None:
-        await db.users.update_one(
-            {"_id": db.users.find_one({"_id": user_id}) and user_id or None},
-            {"$set": {"online_status": True, "last_seen": datetime.now(timezone.utc)}}
-        )
+    try:
+        db = get_database()
+        if db is not None:
+            query = {"_id": ObjectId(user_id)} if ObjectId.is_valid(user_id) else {"_id": user_id}
+            await db.users.update_one(
+                query,
+                {"$set": {"online_status": True, "last_seen": datetime.now(timezone.utc)}}
+            )
+    except Exception as e:
+        logger.warning("Socket user online status update warning: %s", e)
+
     logger.info("User %s connected on sid %s", user_id, sid)
     
     # Broadcast user online
@@ -76,17 +92,16 @@ async def disconnect(sid):
                 del connected_users[user_id]
                 # User has no more active tabs -> mark offline
                 now_iso = datetime.now(timezone.utc).isoformat()
-                db = get_database()
-                if db is not None:
-                    try:
-                        from bson import ObjectId
+                try:
+                    db = get_database()
+                    if db is not None:
                         query = {"_id": ObjectId(user_id)} if ObjectId.is_valid(user_id) else {"_id": user_id}
                         await db.users.update_one(
                             query,
                             {"$set": {"online_status": False, "last_seen": datetime.now(timezone.utc)}}
                         )
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
                 await sio.emit("user_status", {"user_id": user_id, "online": False, "last_seen": now_iso})
         logger.info("User %s disconnected from sid %s", user_id, sid)
 

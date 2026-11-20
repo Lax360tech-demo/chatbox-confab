@@ -4,8 +4,14 @@ from typing import List
 from dotenv import load_dotenv
 
 # Load .env file from backend directory or project root
-env_path = Path(__file__).resolve().parent.parent.parent / ".env"
-load_dotenv(dotenv_path=env_path)
+backend_dir = Path(__file__).resolve().parent.parent.parent
+env_path = backend_dir / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    root_env = backend_dir.parent / ".env"
+    if root_env.exists():
+        load_dotenv(dotenv_path=root_env)
 
 class Settings:
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "CONFAB")
@@ -15,13 +21,18 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200")) # 30 days
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "60"))
     
-    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "")
     MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "confab_db")
     
+    # Allowed CORS Origins
+    _raw_cors = os.getenv(
+        "CORS_ORIGINS",
+        "https://chatbox-confab.vercel.app,http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
+    )
     CORS_ORIGINS: List[str] = [
         origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173").split(",")
-        if origin.strip()
+        for origin in _raw_cors.split(",")
+        if origin.strip() and origin.strip() != "*"
     ]
     
     UPLOAD_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", os.getenv("UPLOAD_DIR", "uploads")))

@@ -23,7 +23,17 @@ export function SocketProvider({ children }) {
     }
 
     // Connect to Socket.IO backend
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || '/';
+    const getSocketUrl = () => {
+      if (import.meta.env.VITE_SOCKET_URL) {
+        return import.meta.env.VITE_SOCKET_URL.trim().replace(/\/+$/, '');
+      }
+      if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
+      }
+      return window.location.origin;
+    };
+
+    const socketUrl = getSocketUrl();
     const s = io(socketUrl, {
       auth: { token },
       path: '/socket.io',

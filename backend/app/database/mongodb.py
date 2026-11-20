@@ -1,63 +1,113 @@
 import logging
+import urllib.parse
+from typing import Optional
+from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+import certifi
+
 from app.core.config import settings
 
 logger = logging.getLogger("confab.db")
 
 class Database:
-    client: AsyncIOMotorClient = None
-    db: AsyncIOMotorDatabase = None
+    client: Optional[AsyncIOMotorClient] = None
+    db: Optional[AsyncIOMotorDatabase] = None
+    is_connected: bool = False
+    connection_error: Optional[str] = None
 
 db_instance = Database()
 
+def normalize_mongo_uri(raw_uri: str) -> str:
+    """Safely format and validate MongoDB URI, encoding passwords with special characters if needed."""
+    if not raw_uri:
+        return ""
+    uri = raw_uri.strip().strip("'").strip('"')
+    
+    # Remove accidental angle brackets like <password>
+    if "://" in uri:
+        scheme, remainder = uri.split("://", 1)
+        if "@" in remainder:
+            # Check if there are credentials before host
+            cred_part, host_part = remainder.rsplit("@", 1)
+            if ":" in cred_part:
+                username, password = cred_part.split(":", 1)
+                # Strip angle brackets if user left <pass>
+                password = password.strip("<> ")
+                # Ensure password is URL encoded if it contains special characters like @ or #
+                if "@" in password or "#" in password or ":" in password:
+                    unquoted = urllib.parse.unquote_plus(password)
+                    password = urllib.parse.quote_plus(unquoted)
+                cred_part = f"{username}:{password}"
+            remainder = f"{cred_part}@{host_part}"
+        uri = f"{scheme}://{remainder}"
+    return uri
+
 async def connect_to_mongo():
-    uri = settings.MONGODB_URI
+    raw_uri = settings.MONGODB_URI
+    if not raw_uri:
+        error_msg = "MONGODB_URI environment variable is not configured."
+        logger.error(error_msg)
+        db_instance.is_connected = False
+        db_instance.connection_error = error_msg
+        return
+
+    uri = normalize_mongo_uri(raw_uri)
+    
+    # Mask password for secure logging
     masked_uri = uri
     if "@" in uri:
-        # Mask password in logs
-        parts = uri.split("@")
-        prefix = parts[0].split("://")
-        masked_uri = f"{prefix[0]}://****@{parts[1]}"
-    
-    if "<db_password>" in uri:
-        logger.error(
-            "CRITICAL: MONGODB_URI in backend/.env still contains the placeholder '<db_password>'. "
-            "Please replace '<db_password>' with your actual MongoDB Atlas database password!"
-        )
+        try:
+            parts = uri.split("@")
+            prefix = parts[0].split("://")
+            masked_uri = f"{prefix[0]}://****@{parts[1]}"
+        except Exception:
+            masked_uri = "mongodb+srv://****"
 
-    logger.info("Connecting to MongoDB at %s (Database: %s)...", masked_uri, settings.MONGODB_DB_NAME)
-    
+    db_name = settings.MONGODB_DB_NAME or "confab_db"
+    logger.info("Connecting to MongoDB Atlas at %s (Database: %s)...", masked_uri, db_name)
+
+    client_options = {
+        "serverSelectionTimeoutMS": 7500,
+        "connectTimeoutMS": 7500,
+        "socketTimeoutMS": 15000,
+        "maxPoolSize": 50,
+        "minPoolSize": 5,
+        "retryWrites": True,
+        "retryReads": True,
+    }
+
+    # If connecting with SSL/TLS (Atlas SRV or explicit tls=true), use certifi CA bundle
+    if "mongodb+srv" in uri or "tls=true" in uri.lower() or "ssl=true" in uri.lower():
+        client_options["tls"] = True
+        client_options["tlsCAFile"] = certifi.where()
+
     try:
-        db_instance.client = AsyncIOMotorClient(
-            uri,
-            serverSelectionTimeoutMS=5000,
-            maxPoolSize=50,
-            minPoolSize=5
-        )
-        db_instance.db = db_instance.client[settings.MONGODB_DB_NAME]
-        
-        # Test connection ping
-        await db_instance.client.admin.command('ping')
-        logger.info("MongoDB connection ping successful!")
+        client = AsyncIOMotorClient(uri, **client_options)
+        database = client[db_name]
 
-        # Create indexes
+        # Execute ping to verify live cluster reachability and authentication
+        await client.admin.command('ping')
+        
+        db_instance.client = client
+        db_instance.db = database
+        db_instance.is_connected = True
+        db_instance.connection_error = None
+        logger.info("MongoDB Atlas connection established and verified successfully.")
+
+        # Initialize collections and indexes
         await _create_indexes(db_instance.db)
-        logger.info("MongoDB connected and indexes verified successfully.")
+        logger.info("MongoDB indexes verified successfully.")
     except Exception as e:
-        logger.error("Failed to connect to primary MongoDB URI (%s): %s", masked_uri, e)
-        if "localhost" not in uri and "127.0.0.1" not in uri:
-            logger.warning("Attempting fallback connection to local MongoDB (mongodb://localhost:27017)...")
-            try:
-                db_instance.client = AsyncIOMotorClient(
-                    "mongodb://localhost:27017",
-                    serverSelectionTimeoutMS=3000
-                )
-                db_instance.db = db_instance.client[settings.MONGODB_DB_NAME]
-                await db_instance.client.admin.command('ping')
-                await _create_indexes(db_instance.db)
-                logger.info("Connected to fallback local MongoDB successfully.")
-            except Exception as fallback_err:
-                logger.error("Fallback to local MongoDB also failed: %s", fallback_err)
+        db_instance.is_connected = False
+        db_instance.client = None
+        db_instance.db = None
+        db_instance.connection_error = str(e)
+        logger.error(
+            "CRITICAL: Failed to connect to MongoDB Atlas at %s: %s. "
+            "Please verify that MONGODB_URI is correct and that MongoDB Atlas Network Access has 0.0.0.0/0 allowed.",
+            masked_uri,
+            e
+        )
 
 async def _create_indexes(db: AsyncIOMotorDatabase):
     try:
@@ -97,12 +147,22 @@ async def _create_indexes(db: AsyncIOMotorDatabase):
         await db.otps.create_index("expires_at", expireAfterSeconds=0)
         await db.otps.create_index("phone_number")
     except Exception as e:
-        logger.warning("Index initialization notice: %s", e)
+        logger.warning("MongoDB index initialization notice: %s", e)
 
 async def close_mongo_connection():
     if db_instance.client:
         logger.info("Closing MongoDB connection...")
         db_instance.client.close()
+        db_instance.client = None
+        db_instance.db = None
+        db_instance.is_connected = False
 
 def get_database() -> AsyncIOMotorDatabase:
+    if not db_instance.is_connected or db_instance.db is None:
+        error_detail = db_instance.connection_error or "Database connection is not available"
+        logger.error("Database access requested but database is unavailable: %s", error_detail)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database service is currently unavailable. Please check MongoDB Atlas connectivity."
+        )
     return db_instance.db

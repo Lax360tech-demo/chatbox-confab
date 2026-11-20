@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+// Normalize API Base URL
+// Works if VITE_API_URL is undefined, "/api", "https://chatbox-confab.onrender.com", or "https://chatbox-confab.onrender.com/api"
+const getBaseURL = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl) return '/api';
+  const trimmed = envUrl.trim().replace(/\/+$/, '');
+  if (trimmed.endsWith('/api')) return trimmed;
+  return `${trimmed}/api`;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,7 +39,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('confab_refresh_token');
       if (refreshToken) {
         try {
-          const res = await axios.post('/api/auth/refresh', { refresh_token: refreshToken });
+          const res = await axios.post(`${getBaseURL()}/auth/refresh`, { refresh_token: refreshToken });
           const { access_token, refresh_token: newRefresh } = res.data;
           localStorage.setItem('confab_access_token', access_token);
           if (newRefresh) localStorage.setItem('confab_refresh_token', newRefresh);

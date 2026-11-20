@@ -1,13 +1,16 @@
-
 {
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://chatbox-confab.onrender.com"
+      "source": "/api/:path*",
+      "destination": "https://chatbox-confab.onrender.com/api/:path*"
     },
     {
-      "source": "/uploads/(.*)",
-      "destination": "https://chatbox-confab.onrender.com"
+      "source": "/socket.io/:path*",
+      "destination": "https://chatbox-confab.onrender.com/socket.io/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://chatbox-confab.onrender.com/uploads/:path*"
     },
     {
       "source": "/(.*)",

@@ -302,12 +302,12 @@ export default function ChatArea({
             onClick={onOpenDetails}
           >
             <div className="flex items-center">
-              <span className="font-bold text-sm text-[var(--text-primary)] truncate">
+              <span className="font-semibold text-[16px] text-[var(--text-primary)] truncate">
                 {chatTitle}
               </span>
               <SignatureEmoji emoji={chatEmoji} />
             </div>
-            <span className="text-[11px] text-[var(--text-muted)] truncate">
+            <span className="text-[13px] text-[var(--text-muted)] truncate">
               {isGroup ? (
                 `${conversation?.group_details?.members_count || 2} members`
               ) : isOtherOnline ? (

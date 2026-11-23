@@ -135,7 +135,7 @@ export default function MessageBubble({
 
         {/* Content by Message Type */}
         {message.message_type === 'text' && (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="text-[14.2px] leading-[19px] whitespace-pre-wrap break-words">{message.content}</p>
         )}
 
         {message.message_type === 'image' && (
@@ -146,7 +146,7 @@ export default function MessageBubble({
               className="max-h-80 w-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity"
               onClick={() => setIsLightboxOpen(true)}
             />
-            {message.content && <p className="text-sm mt-2 whitespace-pre-wrap">{message.content}</p>}
+            {message.content && <p className="text-[14.2px] leading-[19px] mt-2 whitespace-pre-wrap">{message.content}</p>}
             <ImageLightboxModal
               isOpen={isLightboxOpen}
               src={message.attachment?.url}
@@ -163,7 +163,7 @@ export default function MessageBubble({
               controls
               className="max-h-80 w-full rounded-xl bg-black"
             />
-            {message.content && <p className="text-sm mt-2 whitespace-pre-wrap">{message.content}</p>}
+            {message.content && <p className="text-[14.2px] leading-[19px] mt-2 whitespace-pre-wrap">{message.content}</p>}
           </div>
         )}
 

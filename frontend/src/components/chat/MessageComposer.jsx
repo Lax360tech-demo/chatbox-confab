@@ -305,8 +305,8 @@ export default function MessageComposer({
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            className="w-full bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none resize-none max-h-32"
+            placeholder="Type a message"
+            className="w-full bg-transparent text-[var(--text-primary)] placeholder-[var(--text-muted)] text-[15px] focus:outline-none resize-none max-h-32"
           />
         </div>
 

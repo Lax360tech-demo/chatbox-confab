@@ -12,6 +12,7 @@ import {
   Check,
   CheckCheck,
   Compass,
+  MoreVertical,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -171,25 +172,32 @@ export default function ChatDashboard() {
       >
         {activeTab === 'chats' || activeTab === 'archived' ? (
           <>
-            {/* Chats List Header */}
+            {/* Chats List Header (WhatsApp-Style Top Left Brand) */}
             <div className="p-4 border-b border-[var(--border-subtle)] space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-                  {activeTab === 'archived' ? 'Archived Chats' : 'Messages'}
+                <h2 className="text-[22px] font-bold tracking-tight text-[var(--accent)] select-none">
+                  {activeTab === 'archived' ? 'Archived' : 'Confab'}
                 </h2>
 
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1.5">
                   <button
                     onClick={() => setShowCreateGroup(true)}
-                    className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-                    title="Create Group"
+                    className="w-8 h-8 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                    title="New Group or Chat"
                   >
-                    <Plus size={18} />
+                    <Plus size={18} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="p-1.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    title="Menu"
+                  >
+                    <MoreVertical size={18} />
                   </button>
                 </div>
               </div>
 
-              {/* Search Bar */}
+              {/* Search Bar - WhatsApp style */}
               <div className="relative">
                 <Search
                   size={16}
@@ -197,24 +205,24 @@ export default function ChatDashboard() {
                 />
                 <input
                   type="text"
-                  placeholder="Search conversations..."
+                  placeholder="Search or start a new chat"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[14px] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 />
               </div>
 
-              {/* Filter Pills */}
+              {/* Filter Pills - WhatsApp style */}
               <div className="flex items-center space-x-2">
                 {[
                   { id: 'all', label: 'All' },
-                  { id: 'unread', label: 'Unread' },
+                  { id: 'unread', label: totalUnread > 0 ? `Unread ${totalUnread}` : 'Unread' },
                   { id: 'groups', label: 'Groups' },
                 ].map((f) => (
                   <button
                     key={f.id}
                     onClick={() => setChatFilter(f.id)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer ${
                       chatFilter === f.id
                         ? 'bg-[var(--accent)] text-white shadow-sm'
                         : 'bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
@@ -231,8 +239,8 @@ export default function ChatDashboard() {
               {filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-[var(--text-muted)]">
                   <MessageSquare size={32} className="mb-2 opacity-50" />
-                  <p className="text-xs font-semibold text-[var(--text-secondary)]">No conversations</p>
-                  <p className="text-[11px] mt-1">Start a conversation from your contacts.</p>
+                  <p className="text-[14px] font-semibold text-[var(--text-secondary)]">No conversations</p>
+                  <p className="text-[12px] mt-1">Start a conversation from your contacts.</p>
                 </div>
               ) : (
                 filteredConversations.map((conv) => {
@@ -251,7 +259,7 @@ export default function ChatDashboard() {
                     <div
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv)}
-                      className={`p-3.5 flex items-center space-x-3 transition-colors cursor-pointer ${
+                      className={`p-3 sm:px-3.5 sm:py-3 flex items-center space-x-3 transition-colors cursor-pointer ${
                         isSelected
                           ? 'bg-[var(--accent-light)] border-l-4 border-[var(--accent)]'
                           : 'hover:bg-[var(--bg-hover)]'
@@ -267,26 +275,26 @@ export default function ChatDashboard() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
                           <div className="flex items-center space-x-1 min-w-0">
-                            <span className="text-sm font-bold text-[var(--text-primary)] truncate">
+                            <span className="text-[16px] font-semibold text-[var(--text-primary)] truncate">
                               {title}
                             </span>
                             <SignatureEmoji emoji={emoji} />
                           </div>
-                          <span className="text-[10px] text-[var(--text-muted)] shrink-0 ml-1">
+                          <span className="text-[12px] text-[var(--text-muted)] font-normal shrink-0 ml-1">
                             {formatTime(conv.last_message?.created_at || conv.updated_at)}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-[var(--text-muted)] truncate max-w-[180px]">
+                          <p className="text-[14px] text-[var(--text-muted)] truncate max-w-[190px] leading-snug">
                             {conv.last_message?.content || 'No messages yet'}
                           </p>
 
                           <div className="flex items-center space-x-1 shrink-0 ml-2">
-                            {conv.is_pinned && <Pin size={12} className="text-amber-300" />}
-                            {conv.is_muted && <VolumeX size={12} className="text-[var(--text-muted)]" />}
+                            {conv.is_pinned && <Pin size={13} className="text-amber-400" />}
+                            {conv.is_muted && <VolumeX size={13} className="text-[var(--text-muted)]" />}
                             {conv.unread_count > 0 && (
-                              <span className="min-w-[18px] h-4 px-1 rounded-full bg-[var(--accent)] text-white text-[10px] font-bold flex items-center justify-center">
+                              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-bold flex items-center justify-center">
                                 {conv.unread_count}
                               </span>
                             )}

@@ -58,10 +58,10 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
             <Compass size={18} />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
+            <h2 className="text-[22px] font-bold tracking-tight text-[var(--accent)]">
               Chronicle
             </h2>
-            <p className="text-[11px] text-[var(--text-muted)]">24-hour chronicles & updates</p>
+            <p className="text-[12px] text-[var(--text-muted)]">24-hour chronicles & updates</p>
           </div>
         </div>
 
@@ -126,16 +126,16 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
+                <span className="text-[16px] font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
                   My Chronicle
                 </span>
                 {hasMyStories && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold">
                     {myStories.length} {myStories.length === 1 ? 'chronicle' : 'chronicles'}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+              <p className="text-[13px] text-[var(--text-muted)] mt-0.5 truncate">
                 {hasMyStories
                   ? `Last updated ${latestMyStory?.created_at ? formatTime(latestMyStory.created_at) : 'recently'}`
                   : 'Tap to add a chronicle update'}
@@ -171,12 +171,12 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-1">
-                        <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                        <span className="text-[16px] font-semibold text-[var(--text-primary)] truncate">
                           {item.user_name}
                         </span>
                         <SignatureEmoji emoji={item.user_emoji} />
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                      <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
                         {latest?.created_at ? formatTime(latest.created_at) : 'Just now'} • {item.stories?.length || 1} {item.stories?.length === 1 ? 'chronicle' : 'chronicles'}
                       </p>
                     </div>
@@ -212,12 +212,12 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-1">
-                        <span className="text-sm font-medium text-[var(--text-secondary)] truncate">
+                        <span className="text-[16px] font-semibold text-[var(--text-secondary)] truncate">
                           {item.user_name}
                         </span>
                         <SignatureEmoji emoji={item.user_emoji} />
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                      <p className="text-[13px] text-[var(--text-muted)] mt-0.5">
                         {latest?.created_at ? formatTime(latest.created_at) : 'Viewed'}
                       </p>
                     </div>

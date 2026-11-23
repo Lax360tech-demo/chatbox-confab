@@ -112,13 +112,13 @@ export default function ContactList({
                   />
                   <div className="min-w-0">
                     <div className="flex items-center space-x-1">
-                      <span className="text-sm font-bold text-[var(--text-primary)] truncate">
+                      <span className="text-[16px] font-semibold text-[var(--text-primary)] truncate">
                         {contact.contact_name}
                       </span>
                       <SignatureEmoji emoji={contact.signature_emoji} />
                     </div>
                     <div className="flex items-center space-x-2 mt-0.5">
-                      <span className="text-xs text-[var(--text-muted)] font-mono">
+                      <span className="text-[13px] text-[var(--text-muted)] font-mono">
                         {contact.phone_number}
                       </span>
                       {contact.categories?.[0] && (

@@ -60,7 +60,7 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
       if (onStoryCreated) onStoryCreated(res.data);
       onClose();
     } catch (err) {
-      alert('Failed to publish story');
+      alert('Failed to publish chronicle');
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
             }`}
           >
             <Type size={16} />
-            <span>Text Story</span>
+            <span>Text Chronicle</span>
           </button>
           <label
             className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center space-x-2 border-b-2 transition-colors cursor-pointer ${
@@ -117,7 +117,7 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
               <textarea
                 rows={4}
                 maxLength={200}
-                placeholder="Type your story here..."
+                placeholder="Type your chronicle here..."
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 className="w-full bg-transparent text-white placeholder-white/60 text-lg font-semibold text-center focus:outline-none resize-none"
@@ -197,7 +197,7 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
                 disabled={loading || (mode === 'text' && !textContent.trim()) || (mode === 'media' && !mediaUrl)}
                 className="px-5 py-2 rounded-xl text-sm font-semibold bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-md disabled:opacity-50 cursor-pointer"
               >
-                {loading ? 'Sharing...' : 'Share Story'}
+                {loading ? 'Sharing...' : 'Share Chronicle'}
               </button>
             </div>
           </div>

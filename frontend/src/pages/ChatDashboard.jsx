@@ -335,19 +335,19 @@ export default function ChatDashboard() {
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[var(--accent)] to-purple-500 text-white flex items-center justify-center mb-4 shadow-xl shadow-[var(--accent)]/20 animate-pulse">
               <Compass size={40} />
             </div>
-            <h3 className="text-2xl font-black text-[var(--text-primary)]">Chronicle Stories</h3>
+            <h3 className="text-2xl font-black text-[var(--text-primary)]">Chronicles</h3>
             <p className="text-xs font-semibold text-[var(--accent)] uppercase tracking-widest mt-1">
               Connect Beyond Conversations
             </p>
             <p className="text-xs text-[var(--text-muted)] max-w-sm mt-3 leading-relaxed">
-              Click on any story from the Chronicle list to view updates from your contacts, or share your own 24-hour story.
+              Click on any chronicle from the list to view updates from your contacts, or share your own 24-hour chronicle.
             </p>
             <button
               onClick={() => setShowCreateStory(true)}
               className="mt-6 py-2.5 px-6 rounded-2xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-bold shadow-lg shadow-[var(--accent)]/30 transition-all cursor-pointer hover:scale-105 flex items-center space-x-2"
             >
               <Plus size={16} strokeWidth={2.5} />
-              <span>Create New Story</span>
+              <span>Create New Chronicle</span>
             </button>
           </div>
         ) : selectedConversation ? (

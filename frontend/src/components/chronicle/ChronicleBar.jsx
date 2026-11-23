@@ -85,7 +85,7 @@ export default function ChronicleBar({ onOpenCreate, onOpenViewer }) {
           </button>
         </div>
         <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">
-          My Story
+          My Chronicle
         </span>
       </div>
 

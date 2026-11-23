@@ -419,7 +419,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <h4 className="text-lg font-bold text-[var(--text-primary)]">CONFAB</h4>
                 <p className="text-xs text-[var(--accent)] font-semibold">Connect Beyond Conversations.</p>
                 <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto leading-relaxed">
-                  Confab is an ultra-modern personal and group communication platform inspired by WhatsApp, Telegram, and Instagram with real-time messaging, WebSockets, WebRTC calling, and 24h Chronicle stories.
+                  Confab is an ultra-modern personal and group communication platform inspired by WhatsApp, Telegram, and Instagram with real-time messaging, WebSockets, WebRTC calling, and 24h Chronicles.
                 </p>
                 <div className="text-[11px] text-[var(--text-muted)] pt-4 border-t border-[var(--border-subtle)]">
                   Version 1.0.0 (Commercial Grade) • Built with FastAPI, MongoDB, React & Tailwind

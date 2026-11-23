@@ -65,7 +65,7 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
     if (onReplyToStory) {
       onReplyToStory({
         recipientId: data.userId || data.user_id,
-        content: `Replied to your story: "${replyText.trim()}"`,
+        content: `Replied to your chronicle: "${replyText.trim()}"`,
       });
     }
     setReplyText('');
@@ -73,7 +73,7 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this story?')) return;
+    if (!window.confirm('Delete this chronicle?')) return;
     try {
       await api.delete(`/stories/${currentStory.id}`);
       onClose();
@@ -114,7 +114,7 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
               <button
                 onClick={handleDelete}
                 className="p-2 rounded-full hover:bg-white/20 text-rose-400 cursor-pointer transition-colors"
-                title="Delete story"
+                title="Delete chronicle"
               >
                 <Trash2 size={18} />
               </button>

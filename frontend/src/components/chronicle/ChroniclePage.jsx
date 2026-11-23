@@ -61,17 +61,17 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
             <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
               Chronicle
             </h2>
-            <p className="text-[11px] text-[var(--text-muted)]">24-hour stories & status</p>
+            <p className="text-[11px] text-[var(--text-muted)]">24-hour chronicles & updates</p>
           </div>
         </div>
 
         <button
           onClick={onOpenCreate}
           className="py-1.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-[var(--accent)]/20 transition-all cursor-pointer hover:scale-105"
-          title="Create Story"
+          title="Create Chronicle"
         >
           <Plus size={16} strokeWidth={2.5} />
-          <span>New Story</span>
+          <span>New Chronicle</span>
         </button>
       </div>
 
@@ -105,7 +105,7 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
               >
                 <Avatar
                   src={user?.profile_picture}
-                  name={user?.full_name || 'My Story'}
+                  name={user?.full_name || 'My Chronicle'}
                   size="lg"
                   className="border-2 border-[var(--bg-secondary)]"
                 />
@@ -117,7 +117,7 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
                   onOpenCreate();
                 }}
                 className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-[var(--accent)] text-white flex items-center justify-center border-2 border-[var(--bg-secondary)] shadow-md hover:scale-110 transition-transform cursor-pointer"
-                title="Add new story"
+                title="Add new chronicle"
               >
                 <Plus size={14} strokeWidth={3} />
               </button>
@@ -127,18 +127,18 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">
-                  My Story
+                  My Chronicle
                 </span>
                 {hasMyStories && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold">
-                    {myStories.length} {myStories.length === 1 ? 'story' : 'stories'}
+                    {myStories.length} {myStories.length === 1 ? 'chronicle' : 'chronicles'}
                   </span>
                 )}
               </div>
               <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                 {hasMyStories
                   ? `Last updated ${latestMyStory?.created_at ? formatTime(latestMyStory.created_at) : 'recently'}`
-                  : 'Tap to add a story update'}
+                  : 'Tap to add a chronicle update'}
               </p>
             </div>
 
@@ -177,7 +177,7 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
                         <SignatureEmoji emoji={item.user_emoji} />
                       </div>
                       <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                        {latest?.created_at ? formatTime(latest.created_at) : 'Just now'} • {item.stories?.length || 1} {item.stories?.length === 1 ? 'story' : 'stories'}
+                        {latest?.created_at ? formatTime(latest.created_at) : 'Just now'} • {item.stories?.length || 1} {item.stories?.length === 1 ? 'chronicle' : 'chronicles'}
                       </p>
                     </div>
                   </div>
@@ -237,14 +237,14 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
             <div>
               <p className="text-sm font-bold text-[var(--text-primary)]">No updates yet</p>
               <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[220px]">
-                Stories from your contacts will appear here. Share your moments with friends!
+                Chronicles from your contacts will appear here. Share your moments with friends!
               </p>
             </div>
             <button
               onClick={onOpenCreate}
               className="mt-2 py-2 px-4 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--text-primary)] border border-[var(--border-color)] transition-colors cursor-pointer"
             >
-              Post a Story
+              Post a Chronicle
             </button>
           </div>
         )}
@@ -253,7 +253,7 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
         <div className="p-4 text-center">
           <p className="text-[11px] text-[var(--text-muted)] flex items-center justify-center space-x-1">
             <Clock size={12} className="inline mr-1" />
-            <span>Stories automatically disappear after 24 hours</span>
+            <span>Chronicles automatically disappear after 24 hours</span>
           </p>
         </div>
       </div>

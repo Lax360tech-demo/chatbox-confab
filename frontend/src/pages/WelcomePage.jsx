@@ -42,7 +42,7 @@ export default function WelcomePage() {
       <main className="relative z-10 max-w-4xl mx-auto w-full text-center my-auto py-12 flex flex-col items-center">
         <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[var(--accent-light)] border border-[var(--accent)]/30 text-[var(--accent)] text-xs font-semibold mb-6">
           <Sparkles size={14} />
-          <span>Real-time Messaging • WebRTC Calls • Chronicle Stories</span>
+          <span>Real-time Messaging • WebRTC Calls • 24h Chronicles</span>
         </div>
 
         <h2 className="text-4xl sm:text-6xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
@@ -53,7 +53,7 @@ export default function WelcomePage() {
         </h2>
 
         <p className="mt-6 text-sm sm:text-lg text-[var(--text-secondary)] max-w-2xl leading-relaxed">
-          Experience ultra-responsive real-time chat, crystal-clear WebRTC audio & video calls, 24-hour Chronicle stories, polls, and rich signature emojis wrapped in an elegant dark interface.
+          Experience ultra-responsive real-time chat, crystal-clear WebRTC audio & video calls, 24-hour Chronicles, polls, and rich signature emojis wrapped in an elegant dark interface.
         </p>
 
         {/* Feature Highlights Grid */}
@@ -61,7 +61,7 @@ export default function WelcomePage() {
           {[
             { title: 'Real-Time Chat', desc: 'Instant WebSocket delivery', icon: MessageSquare },
             { title: 'WebRTC Calls', desc: 'Direct HD audio & video', icon: Phone },
-            { title: 'Chronicles', desc: '24-hour status stories', icon: Compass },
+            { title: 'Chronicles', desc: '24-hour disappearing updates', icon: Compass },
             { title: 'Signature Emojis', desc: 'Unique profile branding', icon: Sparkles },
           ].map((f, i) => {
             const Icon = f.icon;

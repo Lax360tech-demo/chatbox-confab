@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Avatar from '../common/Avatar';
 import SignatureEmoji from '../common/SignatureEmoji';
+import api from '../../services/api';
 
 export default function ContactList({
   contacts,
@@ -142,14 +143,23 @@ export default function ContactList({
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        try {
+                          const res = await api.get(`/contacts/check-registration?phone=${encodeURIComponent(contact.phone_number)}`);
+                          if (res.data?.is_registered && res.data.user?.id) {
+                            onStartChat(res.data.user.id);
+                            return;
+                          }
+                        } catch (e) {
+                          // fallback
+                        }
                         navigator.clipboard?.writeText(
-                          `Hey ${contact.contact_name}, connect with me on Confab! Download and join at https://confab.app`
+                          `Hey ${contact.contact_name}, connect with me on Confab! Download and join at https://chatbox-confab.vercel.app`
                         );
                         alert(`Invite copied for ${contact.contact_name}!`);
                       }}
                       className="py-1.5 px-2.5 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-active)] text-[var(--text-secondary)] text-xs font-medium flex items-center space-x-1 border border-[var(--border-color)] transition-colors cursor-pointer"
-                      title="Invite to Confab"
+                      title="Invite or Chat"
                     >
                       <Share2 size={13} />
                       <span className="hidden sm:inline">Invite</span>

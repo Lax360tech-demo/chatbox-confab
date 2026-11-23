@@ -22,6 +22,7 @@ export default function CallModal() {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -33,6 +34,9 @@ export default function CallModal() {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+    }
   }, [remoteStream]);
 
   if (!callState) return null;
@@ -42,6 +46,9 @@ export default function CallModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+      {/* Remote Audio Track Playback for all connected calls */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
       <div className="relative w-full max-w-xl bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-3xl shadow-2xl overflow-hidden flex flex-col items-center p-6 text-center">
         {/* Calling Header */}
         <div className="mb-6 flex flex-col items-center">

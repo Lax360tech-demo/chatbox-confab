@@ -26,6 +26,8 @@ export function CallProvider({ children }) {
   const pcRef = useRef(null);
   const timerRef = useRef(null);
   const localStreamRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
+  const pendingRemoteOfferRef = useRef(null);
 
   // Clean up streams & peer connection
   const cleanupCall = () => {
@@ -41,6 +43,8 @@ export function CallProvider({ children }) {
       pcRef.current.close();
       pcRef.current = null;
     }
+    pendingCandidatesRef.current = [];
+    pendingRemoteOfferRef.current = null;
     setLocalStream(null);
     setRemoteStream(null);
     setCallState(null);
@@ -58,9 +62,9 @@ export function CallProvider({ children }) {
       setCallState({
         callId: data.call_id,
         targetId: data.caller_id,
-        targetName: data.caller_name || 'Confab User',
-        targetAvatar: data.caller_avatar || '',
-        targetEmoji: data.caller_emoji || '🚀',
+        targetName: data.caller_name || data.caller_info?.name || 'Confab User',
+        targetAvatar: data.caller_avatar || data.caller_info?.avatar || '',
+        targetEmoji: data.caller_emoji || data.caller_info?.emoji || '🚀',
         callType: data.call_type || 'audio',
         direction: 'incoming',
         status: 'ringing',
@@ -80,10 +84,28 @@ export function CallProvider({ children }) {
 
     // WebRTC signaling
     socket.on('webrtc_signal', async ({ sender_id, signal }) => {
-      if (!pcRef.current) return;
       try {
         if (signal.sdp) {
+          if (!pcRef.current) {
+            // Receiver hasn't accepted yet, store offer until accepted
+            if (signal.sdp.type === 'offer') {
+              pendingRemoteOfferRef.current = signal.sdp;
+            }
+            return;
+          }
+
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+
+          // Drain queued ICE candidates
+          while (pendingCandidatesRef.current.length > 0) {
+            const cand = pendingCandidatesRef.current.shift();
+            try {
+              await pcRef.current.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (e) {
+              console.warn('Candidate queue add error:', e);
+            }
+          }
+
           if (signal.sdp.type === 'offer') {
             const answer = await pcRef.current.createAnswer();
             await pcRef.current.setLocalDescription(answer);
@@ -93,7 +115,11 @@ export function CallProvider({ children }) {
             });
           }
         } else if (signal.candidate) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          if (pcRef.current && pcRef.current.remoteDescription) {
+            await pcRef.current.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          } else {
+            pendingCandidatesRef.current.push(signal.candidate);
+          }
         }
       } catch (err) {
         console.error('WebRTC signal handling error:', err);
@@ -187,8 +213,24 @@ export function CallProvider({ children }) {
         conversationId,
       });
 
-      // 5. Send offer via Socket.IO
+      // 5. Emit call_user so receiver gets ringing popup
       if (socket) {
+        socket.emit('call_user', {
+          receiver_id: receiverId,
+          call_id: callData.id,
+          call_type: callType,
+          conversation_id: conversationId,
+          caller_name: user?.full_name || 'Confab User',
+          caller_avatar: user?.profile_picture || '',
+          caller_emoji: user?.signature_emoji || '🚀',
+          caller_info: {
+            name: user?.full_name || 'Confab User',
+            avatar: user?.profile_picture || '',
+            emoji: user?.signature_emoji || '🚀',
+          },
+        });
+
+        // Send offer SDP
         socket.emit('webrtc_signal', {
           target_id: receiverId,
           signal: { sdp: offer },
@@ -216,6 +258,32 @@ export function CallProvider({ children }) {
       // 2. Setup WebRTC
       const pc = setupPeerConnection(callState.targetId);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+      // If remote offer arrived beforehand, apply it and create answer
+      if (pendingRemoteOfferRef.current) {
+        await pc.setRemoteDescription(new RTCSessionDescription(pendingRemoteOfferRef.current));
+        pendingRemoteOfferRef.current = null;
+
+        // Drain queued ICE candidates
+        while (pendingCandidatesRef.current.length > 0) {
+          const cand = pendingCandidatesRef.current.shift();
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (e) {
+            console.warn('Candidate queue drain error:', e);
+          }
+        }
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        if (socket) {
+          socket.emit('webrtc_signal', {
+            target_id: callState.targetId,
+            signal: { sdp: pc.localDescription },
+          });
+        }
+      }
 
       // 3. Notify backend
       await api.post(`/calls/${callState.callId}/action`, { action: 'accept' });

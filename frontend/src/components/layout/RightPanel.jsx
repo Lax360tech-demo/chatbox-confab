@@ -107,6 +107,7 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
             src={isGroup ? group?.group_picture : otherParticipant?.profile_picture}
             name={isGroup ? group?.group_name : otherParticipant?.full_name}
             size="xl"
+            zoomable={true}
             className="mb-3 ring-4 ring-[var(--accent)]/20"
           />
           <div className="flex items-center text-base font-bold text-[var(--text-primary)]">

@@ -61,10 +61,9 @@ export default function LoginPage() {
               <input
                 type="text"
                 required
-                placeholder="+919876543210 or username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
           </div>
@@ -83,7 +82,6 @@ export default function LoginPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"

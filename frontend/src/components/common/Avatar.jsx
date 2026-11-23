@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ImageLightboxModal from './ImageLightboxModal';
 
-export default function Avatar({ src, name, size = 'md', isOnline = false, className = '' }) {
+export default function Avatar({ src, name, size = 'md', isOnline = false, className = '', zoomable = false }) {
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+
   const sizeClasses = {
     xs: 'w-6 h-6 text-xs',
     sm: 'w-8 h-8 text-sm',
@@ -42,29 +45,43 @@ export default function Avatar({ src, name, size = 'md', isOnline = false, class
   };
 
   return (
-    <div className={`relative inline-block select-none shrink-0 ${className}`}>
-      {src ? (
-        <img
-          src={src}
-          alt={name || 'Avatar'}
-          className={`${sizeClasses[size]} rounded-full object-cover ring-2 ring-[var(--border-subtle)] shadow-sm`}
-          onError={(e) => {
-            e.target.style.display = 'none';
-            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
-          }}
-        />
-      ) : null}
+    <>
       <div
-        className={`${sizeClasses[size]} rounded-full bg-gradient-to-tr ${getGradient(name)} text-white font-semibold flex items-center justify-center shadow-sm ${src ? 'hidden' : 'flex'}`}
+        onClick={zoomable && src ? (e) => { e.stopPropagation(); setIsZoomOpen(true); } : undefined}
+        className={`relative inline-block select-none shrink-0 ${zoomable && src ? 'cursor-zoom-in group/avatar' : ''} ${className}`}
       >
-        {getInitial(name)}
+        {src ? (
+          <img
+            src={src}
+            alt={name || 'Avatar'}
+            className={`${sizeClasses[size]} rounded-full object-cover ring-2 ring-[var(--border-subtle)] shadow-sm ${zoomable ? 'transition-transform group-hover/avatar:scale-105' : ''}`}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div
+          className={`${sizeClasses[size]} rounded-full bg-gradient-to-tr ${getGradient(name)} text-white font-semibold flex items-center justify-center shadow-sm ${src ? 'hidden' : 'flex'}`}
+        >
+          {getInitial(name)}
+        </div>
+
+        {isOnline && (
+          <span
+            className={`absolute bottom-0 right-0 ${dotSizes[size]} bg-emerald-500 border-2 border-[var(--bg-main)] rounded-full ring-1 ring-emerald-400`}
+          />
+        )}
       </div>
 
-      {isOnline && (
-        <span
-          className={`absolute bottom-0 right-0 ${dotSizes[size]} bg-emerald-500 border-2 border-[var(--bg-main)] rounded-full ring-1 ring-emerald-400`}
+      {zoomable && src && (
+        <ImageLightboxModal
+          isOpen={isZoomOpen}
+          src={src}
+          alt={name ? `${name}'s Profile Picture` : 'Profile Picture'}
+          onClose={() => setIsZoomOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 }

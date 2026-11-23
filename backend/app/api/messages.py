@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.database.mongodb import get_database
@@ -63,6 +63,9 @@ async def send_message(req: MessageSendRequest, current_user_id: str = Depends(g
         "is_starred": False,
         "deleted_for": [],
         "deleted_for_everyone": False,
+        "disappearing_hours": 24,
+        "viewed_at": None,
+        "expires_at": None,
         "status": "sent",
         "created_at": now
     }
@@ -88,11 +91,11 @@ async def send_message(req: MessageSendRequest, current_user_id: str = Depends(g
 
     serialized = serialize_doc(msg_doc)
 
-    # Broadcast via Socket.IO room
+    # Broadcast via Socket.IO room and user rooms for instant delivery without reload
     try:
         await sio.emit("receive_message", serialized, room=f"conv:{req.conversation_id}")
-        # Also notify individual user rooms for instant conversation list updates!
         for p in conv.get("participants", []):
+            await sio.emit("receive_message", serialized, room=f"user:{p}")
             if p != current_user_id:
                 await sio.emit("conversation_update", {
                     "conversation_id": req.conversation_id,
@@ -118,10 +121,25 @@ async def get_messages(
     if not conv or current_user_id not in conv.get("participants", []):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    now = datetime.now(timezone.utc)
+
+    # Purge expired messages in the background
+    try:
+        await db.messages.delete_many({
+            "conversation_id": conversation_id,
+            "expires_at": {"$ne": None, "$lte": now}
+        })
+    except Exception:
+        pass
+
     filter_query = {
         "conversation_id": conversation_id,
         "deleted_for": {"$ne": current_user_id},
-        "deleted_for_everyone": {"$ne": True}
+        "deleted_for_everyone": {"$ne": True},
+        "$or": [
+            {"expires_at": None},
+            {"expires_at": {"$gt": now}}
+        ]
     }
 
     if before:
@@ -142,12 +160,17 @@ async def get_messages(
     # Reverse so they are returned in chronological order
     raw_messages.reverse()
     
-    # Auto mark messages as read by current user
+    # Auto mark messages as read by current user and start 24h expiration timer
     unread_msg_ids = [m["_id"] for m in raw_messages if current_user_id not in m.get("read_by", []) and m.get("sender_id") != current_user_id]
     if unread_msg_ids:
+        viewed_now = datetime.now(timezone.utc)
+        expires_at = viewed_now + timedelta(hours=24)
         await db.messages.update_many(
             {"_id": {"$in": unread_msg_ids}},
-            {"$addToSet": {"read_by": current_user_id, "delivered_to": current_user_id}}
+            {
+                "$addToSet": {"read_by": current_user_id, "delivered_to": current_user_id},
+                "$set": {"viewed_at": viewed_now, "expires_at": expires_at}
+            }
         )
         try:
             await sio.emit("message_read", {

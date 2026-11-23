@@ -151,6 +151,9 @@ async def call_user(sid, data):
     call_id = data.get("call_id")
     call_type = data.get("call_type", "audio")
     caller_info = data.get("caller_info", {})
+    caller_name = caller_info.get("name") or caller_info.get("full_name") or data.get("caller_name") or "Confab User"
+    caller_avatar = caller_info.get("avatar") or caller_info.get("profile_picture") or data.get("caller_avatar") or ""
+    caller_emoji = caller_info.get("emoji") or caller_info.get("signature_emoji") or data.get("caller_emoji") or "🚀"
 
     logger.info("Call signaling: %s calling %s (call_id: %s)", caller_id, receiver_id, call_id)
     if receiver_id:
@@ -159,6 +162,9 @@ async def call_user(sid, data):
             {
                 "call_id": call_id,
                 "caller_id": caller_id,
+                "caller_name": caller_name,
+                "caller_avatar": caller_avatar,
+                "caller_emoji": caller_emoji,
                 "call_type": call_type,
                 "caller_info": caller_info,
                 "conversation_id": data.get("conversation_id")

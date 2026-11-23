@@ -33,6 +33,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [signatureEmoji, setSignatureEmoji] = useState(user?.signature_emoji || '🚀');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Privacy states
   const [lastSeen, setLastSeen] = useState(user?.privacy_settings?.last_seen || 'everyone');
@@ -58,7 +59,12 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (about.length > 150) {
+      alert('About section cannot exceed 150 characters');
+      return;
+    }
     setSaving(true);
+    setSaveSuccess(false);
     try {
       await updateProfile({
         full_name: fullName.trim(),
@@ -72,7 +78,8 @@ export default function SettingsModal({ isOpen, onClose }) {
           read_receipts: readReceipts,
         },
       });
-      alert('Profile updated successfully!');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to update profile');
     } finally {
@@ -238,25 +245,51 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase mb-1">
-                    About / Description
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase">
+                      About / Status
+                    </label>
+                    <span className={`text-[11px] font-mono ${about.length > 150 ? 'text-rose-400 font-bold' : 'text-[var(--text-muted)]'}`}>
+                      {about.length}/150
+                    </span>
+                  </div>
                   <textarea
                     rows={2}
+                    maxLength={150}
                     value={about}
                     onChange={(e) => setAbout(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   />
                 </div>
 
-                <div className="pt-2">
+                {saveSuccess && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl flex items-center space-x-2">
+                    <Sparkles size={16} className="shrink-0" />
+                    <span>Profile and status updated successfully!</span>
+                  </div>
+                )}
+
+                <div className="pt-2 flex items-center space-x-3">
                   <button
                     type="submit"
-                    disabled={saving}
-                    className="px-6 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold shadow-md flex items-center space-x-2 cursor-pointer"
+                    disabled={saving || about.length > 150}
+                    className="px-6 py-2.5 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold shadow-md flex items-center space-x-2 cursor-pointer disabled:opacity-50"
                   >
                     <Save size={16} />
                     <span>{saving ? 'Saving...' : 'Save Profile'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFullName(user?.full_name || '');
+                      setUsername(user?.username || '');
+                      setAbout(user?.about || '');
+                      setProfilePic(user?.profile_picture || '');
+                      setSignatureEmoji(user?.signature_emoji || '🚀');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-medium transition cursor-pointer"
+                  >
+                    Cancel
                   </button>
                 </div>
               </form>

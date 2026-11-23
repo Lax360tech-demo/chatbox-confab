@@ -150,7 +150,6 @@ export default function RegisterPage() {
               <input
                 type="text"
                 required
-                placeholder="Rajesh Kumar"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -163,7 +162,6 @@ export default function RegisterPage() {
               <input
                 type="text"
                 required
-                placeholder="rajesh_k"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -181,12 +179,10 @@ export default function RegisterPage() {
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
                 className="w-20 px-3 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] text-center font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                placeholder="+91"
               />
               <input
                 type="tel"
                 required
-                placeholder="9876543210"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
                 className="flex-1 px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -205,7 +201,6 @@ export default function RegisterPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -218,7 +213,6 @@ export default function RegisterPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"

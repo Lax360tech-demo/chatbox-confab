@@ -38,6 +38,7 @@ export default function MessageComposer({
   const typingTimeoutRef = useRef(null);
   const fileInputRef = useRef(null);
   const docInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     if (editingMessage) {
@@ -56,6 +57,25 @@ export default function MessageComposer({
         onTyping(false);
       }, 2000);
     }
+  };
+
+  const handleInsertEmoji = (emoji) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setText((prev) => prev + emoji);
+      setShowEmojiPicker(false);
+      return;
+    }
+    const start = textarea.selectionStart ?? text.length;
+    const end = textarea.selectionEnd ?? text.length;
+    const newText = text.slice(0, start) + emoji + text.slice(end);
+    setText(newText);
+    setShowEmojiPicker(false);
+    setTimeout(() => {
+      textarea.focus();
+      const cursor = start + emoji.length;
+      textarea.setSelectionRange(cursor, cursor);
+    }, 10);
   };
 
   const handleSend = () => {
@@ -80,6 +100,9 @@ export default function MessageComposer({
   };
 
   const handleKeyDown = (e) => {
+    // If selecting emoji via native Windows (Win + .) or mobile IME, don't submit on Enter
+    if (e.nativeEvent?.isComposing) return;
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -260,23 +283,24 @@ export default function MessageComposer({
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="p-2.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-            title="Insert Emoji"
+            title="Insert Emoji (or use Win + .)"
           >
             <Smile size={20} />
           </button>
-
-          <EmojiPickerModal
-            isOpen={showEmojiPicker}
-            onClose={() => setShowEmojiPicker(false)}
-            onSelect={(emoji) => {
-              setText((prev) => prev + emoji);
-            }}
-          />
         </div>
+
+        {/* Floating Emoji Picker Modal placed above composer */}
+        <EmojiPickerModal
+          isOpen={showEmojiPicker}
+          onClose={() => setShowEmojiPicker(false)}
+          onSelect={handleInsertEmoji}
+          className="bottom-16 left-2 sm:left-4 z-[100]"
+        />
 
         {/* Text Input */}
         <div className="flex-1 min-w-0 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-2xl flex items-center px-4 py-1.5 focus-within:ring-2 focus-within:ring-[var(--accent)]">
           <textarea
+            ref={textareaRef}
             rows={1}
             value={text}
             onChange={handleTextChange}

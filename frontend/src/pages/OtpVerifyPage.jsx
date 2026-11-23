@@ -112,7 +112,6 @@ export default function OtpVerifyPage() {
               autoFocus
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              placeholder="••••••"
               className="w-full text-center tracking-[0.5em] text-2xl font-mono px-4 py-3 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             />
           </div>

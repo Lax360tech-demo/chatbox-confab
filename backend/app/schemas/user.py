@@ -19,7 +19,7 @@ class NotificationSettings(BaseModel):
 class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = None
     username: Optional[str] = None
-    about: Optional[str] = None
+    about: Optional[str] = Field(None, max_length=150)
     profile_picture: Optional[str] = None
     signature_emoji: Optional[str] = None
     theme: Optional[str] = None

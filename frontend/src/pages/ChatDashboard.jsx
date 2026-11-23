@@ -96,17 +96,18 @@ export default function ChatDashboard() {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('conversation_update', () => {
+    const handleUpdate = () => {
       fetchConversations();
-    });
+    };
 
-    socket.on('group_created', () => {
-      fetchConversations();
-    });
+    socket.on('conversation_update', handleUpdate);
+    socket.on('receive_message', handleUpdate);
+    socket.on('group_created', handleUpdate);
 
     return () => {
-      socket.off('conversation_update');
-      socket.off('group_created');
+      socket.off('conversation_update', handleUpdate);
+      socket.off('receive_message', handleUpdate);
+      socket.off('group_created', handleUpdate);
     };
   }, [socket]);
 

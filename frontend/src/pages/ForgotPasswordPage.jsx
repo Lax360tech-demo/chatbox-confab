@@ -84,7 +84,6 @@ export default function ForgotPasswordPage() {
                 <input
                   type="text"
                   required
-                  placeholder="+919876543210"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -111,7 +110,6 @@ export default function ForgotPasswordPage() {
                 type="text"
                 required
                 maxLength={6}
-                placeholder="6-digit OTP"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-center font-mono text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
@@ -127,7 +125,6 @@ export default function ForgotPasswordPage() {
                 <input
                   type="password"
                   required
-                  placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Smile, Heart, Coffee, Car, Lightbulb, Flag, Compass, Sparkles, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Smile, Heart, Coffee, Car, Lightbulb, Compass, Sparkles, X } from 'lucide-react';
 
 const EMOJI_CATEGORIES = [
   {
@@ -40,16 +40,46 @@ const EMOJI_CATEGORIES = [
   },
 ];
 
-export default function EmojiPickerModal({ onSelect, onClose, isOpen }) {
+export default function EmojiPickerModal({ onSelect, onClose, isOpen, className = '' }) {
   const [activeCategory, setActiveCategory] = useState('smileys');
-  const [search, setSearch] = useState('');
+  const modalRef = useRef(null);
+
+  // Close on outside click or Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (e) => {
+      if (modalRef.current && !modalRef.current.contains(e.target)) {
+        onClose?.();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const currentEmojis = EMOJI_CATEGORIES.find((c) => c.id === activeCategory)?.emojis || [];
 
   return (
-    <div className="absolute bottom-16 right-4 sm:right-16 z-50 w-80 sm:w-96 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-3 flex flex-col animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
+    <div
+      ref={modalRef}
+      className={`absolute z-[100] w-80 sm:w-96 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-3 flex flex-col animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md ${className || 'bottom-16 left-2 sm:left-4'}`}
+    >
       {/* Category header tabs */}
       <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
         <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar py-1">

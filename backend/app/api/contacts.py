@@ -119,10 +119,12 @@ async def list_contacts(current_user_id: str = Depends(get_current_user_id)):
         
         # Check if registered user exists (auto-update if registered meanwhile)
         if c.get("phone_number"):
+            was_unregistered = c.get("registration_status") != "registered" or not c.get("registered_user_id")
             registered_user = await db.users.find_one(get_phone_search_filter(c["phone_number"]))
             if registered_user:
+                reg_id_str = str(registered_user["_id"])
                 c["registration_status"] = "registered"
-                c["registered_user_id"] = str(registered_user["_id"])
+                c["registered_user_id"] = reg_id_str
                 c["profile_picture"] = registered_user.get("profile_picture", "")
                 c["username"] = registered_user.get("username", "")
                 c["signature_emoji"] = registered_user.get("signature_emoji", "🚀")
@@ -130,12 +132,12 @@ async def list_contacts(current_user_id: str = Depends(get_current_user_id)):
                 c["online_status"] = registered_user.get("online_status", False)
                 c["last_seen"] = registered_user.get("last_seen").isoformat() if registered_user.get("last_seen") else None
                 # Persist updated status in MongoDB
-                if c.get("registration_status") != "registered":
+                if was_unregistered:
                     await db.contacts.update_one(
                         {"_id": c["_id"]},
                         {"$set": {
                             "registration_status": "registered",
-                            "registered_user_id": str(registered_user["_id"]),
+                            "registered_user_id": reg_id_str,
                             "phone_number": registered_user.get("phone_number", c["phone_number"])
                         }}
                     )

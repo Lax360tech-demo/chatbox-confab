@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import SignatureEmoji from '../common/SignatureEmoji';
 import Avatar from '../common/Avatar';
 import PollCard from './PollCard';
+import ImageLightboxModal from '../common/ImageLightboxModal';
 import { formatTime, formatFileSize, formatDuration } from '../../utils/formatters';
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🔥', '👏', '🙏'];
@@ -39,6 +40,7 @@ export default function MessageBubble({
   const [showMenu, setShowMenu] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioPlayer, setAudioPlayer] = useState(null);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const toggleAudio = (url) => {
     if (!audioPlayer) {
@@ -141,10 +143,16 @@ export default function MessageBubble({
             <img
               src={message.attachment?.url}
               alt="Shared Photo"
-              className="max-h-80 w-full object-cover rounded-xl cursor-pointer hover:opacity-95"
-              onClick={() => window.open(message.attachment?.url, '_blank')}
+              className="max-h-80 w-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity"
+              onClick={() => setIsLightboxOpen(true)}
             />
             {message.content && <p className="text-sm mt-2 whitespace-pre-wrap">{message.content}</p>}
+            <ImageLightboxModal
+              isOpen={isLightboxOpen}
+              src={message.attachment?.url}
+              alt={message.content || 'Shared Photo'}
+              onClose={() => setIsLightboxOpen(false)}
+            />
           </div>
         )}
 

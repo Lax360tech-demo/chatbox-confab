@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, RotateCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { formatApiError } from '../utils/formatters';
 
 export default function OtpVerifyPage() {
   const location = useLocation();
@@ -52,7 +53,7 @@ export default function OtpVerifyPage() {
         navigate('/login');
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid or expired OTP. Please try again.');
+      setError(formatApiError(err, 'Invalid or expired OTP. Please try again.'));
     } finally {
       setLoading(false);
     }

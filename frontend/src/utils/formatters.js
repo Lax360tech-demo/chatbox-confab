@@ -34,3 +34,19 @@ export function formatDuration(seconds) {
   const secs = seconds % 60;
   return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
+
+export function formatApiError(err, fallback = 'An unexpected error occurred') {
+  if (!err) return fallback;
+  const detail = err.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    const field = first?.loc?.slice(-1)[0] || 'Field';
+    const msg = first?.msg || 'Invalid value';
+    return `${field}: ${msg}`;
+  }
+  if (detail && typeof detail === 'object') {
+    return JSON.stringify(detail);
+  }
+  return err.message || fallback;
+}

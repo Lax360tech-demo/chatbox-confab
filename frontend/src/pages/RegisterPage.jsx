@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Eye, EyeOff, Upload, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { formatApiError } from '../utils/formatters';
 import SignatureEmoji from '../components/common/SignatureEmoji';
 import Avatar from '../components/common/Avatar';
 import api from '../services/api';
@@ -83,7 +84,7 @@ export default function RegisterPage() {
         },
       });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to send verification code. Please check your number.');
+      setError(formatApiError(err, 'Failed to send verification code. Please check your number.'));
     } finally {
       setLoading(false);
     }

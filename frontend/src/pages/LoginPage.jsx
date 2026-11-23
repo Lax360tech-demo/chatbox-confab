@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Eye, EyeOff, AlertCircle, ArrowRight, Lock, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { formatApiError } from '../utils/formatters';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function LoginPage() {
       navigate('/');
     } catch (err) {
       setError(
-        err.response?.data?.detail || 'Invalid mobile number, username, or password. Please try again.'
+        formatApiError(err, 'Invalid mobile number, username, or password. Please try again.')
       );
     } finally {
       setLoading(false);

@@ -108,7 +108,7 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
             name={isGroup ? group?.group_name : otherParticipant?.full_name}
             size="xl"
             zoomable={true}
-            className="mb-3 ring-4 ring-[var(--accent)]/20"
+            className="mb-3"
           />
           <div className="flex items-center text-base font-bold text-[var(--text-primary)]">
             <span>{isGroup ? group?.group_name : otherParticipant?.full_name}</span>

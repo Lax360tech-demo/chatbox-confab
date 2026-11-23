@@ -48,7 +48,7 @@ export default function Avatar({ src, name, size = 'md', isOnline = false, class
     <>
       <div
         onClick={zoomable && src ? (e) => { e.stopPropagation(); setIsZoomOpen(true); } : undefined}
-        className={`relative inline-block select-none shrink-0 ${zoomable && src ? 'cursor-zoom-in group/avatar' : ''} ${className}`}
+        className={`relative inline-block rounded-full select-none shrink-0 ${zoomable && src ? 'cursor-zoom-in group/avatar' : ''} ${className}`}
       >
         {src ? (
           <img

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download } from 'lucide-react';
 
-export default function ImageLightboxModal({ isOpen, src, alt = 'Image preview', onClose }) {
+export default function ImageLightboxModal({ isOpen, src, alt = 'Image preview', onClose, allowDownload = true }) {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -82,13 +82,15 @@ export default function ImageLightboxModal({ isOpen, src, alt = 'Image preview',
         >
           <RotateCcw size={17} />
         </button>
-        <button
-          onClick={handleDownload}
-          className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-emerald-400"
-          title="Download Image"
-        >
-          <Download size={18} />
-        </button>
+        {allowDownload && (
+          <button
+            onClick={handleDownload}
+            className="p-1.5 hover:bg-white/10 rounded-xl transition cursor-pointer text-emerald-400"
+            title="Download Image"
+          >
+            <Download size={18} />
+          </button>
+        )}
         <div className="w-px h-4 bg-white/20 mx-1" />
         <button
           onClick={onClose}

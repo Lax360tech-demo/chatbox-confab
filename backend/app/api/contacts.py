@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.database.mongodb import get_database
 from app.core.security import get_current_user_id
 from app.schemas.contact import ContactCreateRequest, ContactUpdateRequest, ContactResponse, CategoryCreateRequest, CategoryResponse
+from app.sockets.socket_manager import sio
 from app.utils.helpers import clean_phone_number, validate_phone_number, get_phone_search_filter, serialize_doc
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
@@ -63,6 +64,8 @@ async def add_contact(req: ContactCreateRequest, current_user_id: str = Depends(
             "updated_at": datetime.now(timezone.utc),
             "contact_name": req.contact_name.strip() or existing_contact.get("contact_name")
         }
+        if req.contact_emoji is not None:
+            update_data["contact_emoji"] = req.contact_emoji
         if registered_user:
             update_data["registration_status"] = "registered"
             update_data["registered_user_id"] = str(registered_user["_id"])
@@ -78,12 +81,19 @@ async def add_contact(req: ContactCreateRequest, current_user_id: str = Depends(
             updated["about"] = registered_user.get("about", "")
             updated["online_status"] = registered_user.get("online_status", False)
             updated["last_seen"] = registered_user.get("last_seen").isoformat() if registered_user.get("last_seen") else None
-        return serialize_doc(updated)
+        
+        ser = serialize_doc(updated)
+        try:
+            await sio.emit("contact_updated", ser, room=f"user:{current_user_id}")
+        except Exception:
+            pass
+        return ser
 
     now = datetime.now(timezone.utc)
     contact_doc = {
         "owner_id": current_user_id,
         "contact_name": req.contact_name.strip(),
+        "contact_emoji": req.contact_emoji or "",
         "phone_number": registered_user["phone_number"] if registered_user else normalized_phone,
         "country_code": req.country_code.strip(),
         "registered_user_id": str(registered_user["_id"]) if registered_user else None,
@@ -105,7 +115,12 @@ async def add_contact(req: ContactCreateRequest, current_user_id: str = Depends(
         contact_doc["online_status"] = registered_user.get("online_status", False)
         contact_doc["last_seen"] = registered_user.get("last_seen").isoformat() if registered_user.get("last_seen") else None
 
-    return serialize_doc(contact_doc)
+    ser = serialize_doc(contact_doc)
+    try:
+        await sio.emit("contact_updated", ser, room=f"user:{current_user_id}")
+    except Exception:
+        pass
+    return ser
 
 @router.get("", response_model=list[ContactResponse])
 async def list_contacts(current_user_id: str = Depends(get_current_user_id)):
@@ -162,6 +177,8 @@ async def update_contact(contact_id: str, req: ContactUpdateRequest, current_use
     update_fields = {"updated_at": datetime.now(timezone.utc)}
     if req.contact_name is not None:
         update_fields["contact_name"] = req.contact_name.strip()
+    if req.contact_emoji is not None:
+        update_fields["contact_emoji"] = req.contact_emoji
     if req.categories is not None:
         update_fields["categories"] = req.categories
 
@@ -180,7 +197,12 @@ async def update_contact(contact_id: str, req: ContactUpdateRequest, current_use
             updated["about"] = reg_user.get("about", "")
             updated["online_status"] = reg_user.get("online_status", False)
 
-    return serialize_doc(updated)
+    ser = serialize_doc(updated)
+    try:
+        await sio.emit("contact_updated", ser, room=f"user:{current_user_id}")
+    except Exception:
+        pass
+    return ser
 
 @router.delete("/{contact_id}")
 async def delete_contact(contact_id: str, current_user_id: str = Depends(get_current_user_id)):
@@ -192,6 +214,11 @@ async def delete_contact(contact_id: str, current_user_id: str = Depends(get_cur
     res = await db.contacts.delete_one(query)
     if res.deleted_count == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+    
+    try:
+        await sio.emit("contact_deleted", {"contact_id": contact_id}, room=f"user:{current_user_id}")
+    except Exception:
+        pass
     return {"success": True, "message": "Contact deleted successfully"}
 
 # Contact Categories ("My Lists")

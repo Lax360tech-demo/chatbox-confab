@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, MessageCircle, Share2, Check, AlertCircle, Sparkles } from 'lucide-react';
+import { X, UserPlus, MessageCircle, Share2, Check, AlertCircle, Sparkles, Smile } from 'lucide-react';
 import api from '../../services/api';
 import Avatar from '../common/Avatar';
 import SignatureEmoji from '../common/SignatureEmoji';
+import EmojiPickerModal from '../common/EmojiPickerModal';
 
 export default function AddContactModal({ isOpen, onClose, onContactAdded, onStartChat }) {
   const [name, setName] = useState('');
+  const [contactEmoji, setContactEmoji] = useState('👤');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [countryCode, setCountryCode] = useState('+91');
   const [mobileNumber, setMobileNumber] = useState('');
   const [category, setCategory] = useState('');
@@ -53,6 +56,7 @@ export default function AddContactModal({ isOpen, onClose, onContactAdded, onSta
     try {
       const res = await api.post('/contacts', {
         contact_name: name.trim(),
+        contact_emoji: contactEmoji || null,
         country_code: countryCode.trim(),
         mobile_number: mobileNumber.trim(),
         categories: category ? [category] : [],
@@ -70,6 +74,8 @@ export default function AddContactModal({ isOpen, onClose, onContactAdded, onSta
 
   const handleReset = () => {
     setName('');
+    setContactEmoji('👤');
+    setShowEmojiPicker(false);
     setMobileNumber('');
     setCategory('');
     setError('');
@@ -177,14 +183,33 @@ export default function AddContactModal({ isOpen, onClose, onContactAdded, onSta
                 <label className="block text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
                   Contact Name *
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-sm"
-                />
+                <div className="flex space-x-2 relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                    className="w-12 h-10 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] hover:border-[var(--accent)] text-xl flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                    title="Choose Contact Emoji"
+                  >
+                    {contactEmoji || '👤'}
+                  </button>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-sm"
+                  />
+                  <EmojiPickerModal
+                    isOpen={showEmojiPicker}
+                    onClose={() => setShowEmojiPicker(false)}
+                    onSelect={(emoji) => {
+                      setContactEmoji(emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                    className="bottom-12 left-0"
+                  />
+                </div>
               </div>
 
               <div>

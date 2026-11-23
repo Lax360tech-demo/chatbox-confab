@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, Flame, Send } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Heart, Flame, Send, Pause, Play } from 'lucide-react';
 import api from '../../services/api';
 import Avatar from '../common/Avatar';
 import SignatureEmoji from '../common/SignatureEmoji';
@@ -8,39 +8,81 @@ import { formatTime } from '../../utils/formatters';
 const REACTION_EMOJIS = ['❤️', '🔥', '👏', '😂', '😮', '😍'];
 
 export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToStory }) {
+  const stories = data?.stories || [];
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState('');
   const [showViewers, setShowViewers] = useState(false);
 
   const timerRef = useRef(null);
+  const videoRef = useRef(null);
 
-  const stories = data?.stories || [];
+  // Initialize starting index to the first unviewed story (FIFO queue progression)
+  useEffect(() => {
+    if (isOpen && stories.length > 0) {
+      const firstUnviewed = stories.findIndex((s) => !s.has_viewed);
+      setCurrentIndex(firstUnviewed !== -1 ? firstUnviewed : 0);
+      setProgress(0);
+      setIsPaused(false);
+    }
+  }, [isOpen, data?.userId, data?.user_id]);
+
   const currentStory = stories[currentIndex];
 
+  // Mark current story as viewed
   useEffect(() => {
     if (!isOpen || !currentStory) return;
-
-    // Automatically mark story as viewed
     api.post(`/stories/${currentStory.id}/view`).catch(() => {});
+    setProgress(0);
+  }, [isOpen, currentIndex, currentStory?.id]);
 
-    // Progress timer: 6 seconds per story
-    if (!isPaused) {
-      timerRef.current = setTimeout(() => {
-        handleNext();
-      }, 6000);
+  // Video play/pause synchronization
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPaused) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }, [isPaused, currentIndex]);
+
+  // Progress timer for text & image stories (smooth 40ms interval over 6000ms duration)
+  useEffect(() => {
+    if (!isOpen || !currentStory || currentStory.media_type === 'video') return;
+
+    if (isPaused) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
     }
 
+    const intervalMs = 40;
+    const durationMs = 6000;
+    const step = (intervalMs / durationMs) * 100;
+
+    timerRef.current = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + step;
+        if (next >= 100) {
+          handleNext();
+          return 0;
+        }
+        return next;
+      });
+    }, intervalMs);
+
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isOpen, currentIndex, isPaused, currentStory?.id]);
+  }, [isOpen, currentIndex, isPaused, currentStory?.id, stories.length]);
 
   if (!isOpen || !currentStory) return null;
 
   const handleNext = () => {
     if (currentIndex < stories.length - 1) {
       setCurrentIndex((prev) => prev + 1);
+      setProgress(0);
     } else {
       onClose();
     }
@@ -49,13 +91,13 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
   const handlePrev = () => {
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
+      setProgress(0);
     }
   };
 
   const handleReact = async (emoji) => {
     try {
       await api.post(`/stories/${currentStory.id}/react`, { emoji });
-      alert(`Reacted with ${emoji}`);
     } catch {}
   };
 
@@ -83,23 +125,29 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-0 sm:p-4 animate-in fade-in duration-150 select-none">
       <div className="relative w-full max-w-sm sm:max-w-md h-full sm:h-[88vh] bg-black sm:rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
-        {/* Top Progress Bars */}
+        {/* Top Progress Bars with smooth synchronized elapsed width */}
         <div className="absolute top-3 left-4 right-4 z-30 flex items-center space-x-1.5">
           {stories.map((s, idx) => (
             <div key={s.id || idx} className="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
               <div
-                className={`h-full bg-white transition-all ${
-                  idx < currentIndex ? 'w-full' : idx === currentIndex ? 'w-full animate-progress' : 'w-0'
-                }`}
+                className="h-full bg-white transition-[width] ease-linear duration-75"
+                style={{
+                  width:
+                    idx < currentIndex
+                      ? '100%'
+                      : idx === currentIndex
+                      ? `${progress}%`
+                      : '0%',
+                }}
               />
             </div>
           ))}
         </div>
 
-        {/* Top User Info Bar */}
+        {/* Top User Info Bar & Controls */}
         <div className="absolute top-6 left-4 right-4 z-30 flex items-center justify-between text-white drop-shadow">
           <div className="flex items-center space-x-3">
-            <Avatar src={data.user_avatar} name={data.user_name} size="sm" />
+            <Avatar src={data.user_avatar} name={data.user_name} size="sm" allowDownload={false} />
             <div>
               <div className="flex items-center text-sm font-bold text-white">
                 <span>{data.user_name}</span>
@@ -109,7 +157,19 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5">
+            {/* Play / Pause Toggle Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPaused((prev) => !prev);
+              }}
+              className="p-2 rounded-full hover:bg-white/20 text-white cursor-pointer transition-colors"
+              title={isPaused ? 'Resume Playback' : 'Pause Playback'}
+            >
+              {isPaused ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}
+            </button>
+
             {data.isMine && (
               <button
                 onClick={handleDelete}
@@ -119,9 +179,11 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
                 <Trash2 size={18} />
               </button>
             )}
+
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-white/20 text-white cursor-pointer transition-colors"
+              title="Close"
             >
               <X size={20} />
             </button>
@@ -161,9 +223,16 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
             </div>
           ) : currentStory.media_type === 'video' ? (
             <video
+              ref={videoRef}
               src={currentStory.media_url}
               autoPlay
               playsInline
+              onTimeUpdate={() => {
+                if (videoRef.current && videoRef.current.duration) {
+                  setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+                }
+              }}
+              onEnded={handleNext}
               className="w-full h-full object-contain"
             />
           ) : (
@@ -243,7 +312,7 @@ export default function ChronicleViewerModal({ data, isOpen, onClose, onReplyToS
               {currentStory.viewers && currentStory.viewers.length > 0 ? (
                 currentStory.viewers.map((v, i) => (
                   <div key={i} className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-[var(--bg-hover)]">
-                    <Avatar src={v.user_avatar} name={v.user_name} size="xs" />
+                    <Avatar src={v.user_avatar} name={v.user_name} size="xs" allowDownload={false} />
                     <span className="text-xs font-medium text-[var(--text-primary)]">{v.user_name}</span>
                   </div>
                 ))

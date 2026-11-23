@@ -94,7 +94,7 @@ export default function ChatDashboard() {
     fetchCategories();
   }, []);
 
-  // Socket events for conversation list updates
+  // Socket events for conversation list updates and contact synchronization
   useEffect(() => {
     if (!socket) return;
 
@@ -102,14 +102,28 @@ export default function ChatDashboard() {
       fetchConversations();
     };
 
+    const handleContactUpdated = (updatedContact) => {
+      setContacts((prev) => prev.map((c) => (c.id === updatedContact.id ? updatedContact : c)));
+      fetchConversations();
+    };
+
+    const handleContactDeleted = ({ contact_id }) => {
+      setContacts((prev) => prev.filter((c) => c.id !== contact_id));
+      fetchConversations();
+    };
+
     socket.on('conversation_update', handleUpdate);
     socket.on('receive_message', handleUpdate);
     socket.on('group_created', handleUpdate);
+    socket.on('contact_updated', handleContactUpdated);
+    socket.on('contact_deleted', handleContactDeleted);
 
     return () => {
       socket.off('conversation_update', handleUpdate);
       socket.off('receive_message', handleUpdate);
       socket.off('group_created', handleUpdate);
+      socket.off('contact_updated', handleContactUpdated);
+      socket.off('contact_deleted', handleContactDeleted);
     };
   }, [socket]);
 
@@ -137,8 +151,13 @@ export default function ChatDashboard() {
     const otherPart = !isGroup
       ? c.participant_details?.find((p) => p.id !== user?.id)
       : null;
+    const contactMatch = !isGroup && otherPart
+      ? contacts.find((ct) => ct.registered_user_id === otherPart.id || (ct.phone_number && ct.phone_number === otherPart.phone_number))
+      : null;
 
-    const name = isGroup ? c.group_details?.group_name : otherPart?.full_name;
+    const name = isGroup
+      ? c.group_details?.group_name
+      : (contactMatch?.contact_name || otherPart?.display_name || otherPart?.full_name);
     const matchesSearch = name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (activeTab === 'archived') return c.is_archived;
@@ -248,10 +267,17 @@ export default function ChatDashboard() {
                   const otherPart = !isGroup
                     ? conv.participant_details?.find((p) => p.id !== user?.id)
                     : null;
+                  const contactMatch = !isGroup && otherPart
+                    ? contacts.find((ct) => ct.registered_user_id === otherPart.id || (ct.phone_number && ct.phone_number === otherPart.phone_number))
+                    : null;
 
-                  const title = isGroup ? conv.group_details?.group_name : otherPart?.full_name;
+                  const title = isGroup
+                    ? conv.group_details?.group_name
+                    : (contactMatch?.contact_name || otherPart?.display_name || otherPart?.full_name);
                   const avatar = isGroup ? conv.group_details?.group_picture : otherPart?.profile_picture;
-                  const emoji = isGroup ? '👥' : otherPart?.signature_emoji;
+                  const emoji = isGroup
+                    ? '👥'
+                    : (contactMatch?.contact_emoji || otherPart?.display_emoji || otherPart?.signature_emoji);
                   const isOnline = !isGroup && (onlineUsers.has(otherPart?.id) || otherPart?.online_status);
                   const isSelected = selectedConversation?.id === conv.id;
 
@@ -361,6 +387,7 @@ export default function ChatDashboard() {
         ) : selectedConversation ? (
           <ChatArea
             conversation={selectedConversation}
+            contacts={contacts}
             onBack={() => setSelectedConversation(null)}
             onOpenDetails={() => setShowRightPanel(!showRightPanel)}
           />

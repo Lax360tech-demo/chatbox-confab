@@ -115,7 +115,7 @@ export default function ContactList({
                       <span className="text-[16px] font-semibold text-[var(--text-primary)] truncate">
                         {contact.contact_name}
                       </span>
-                      <SignatureEmoji emoji={contact.signature_emoji} />
+                      <SignatureEmoji emoji={contact.contact_emoji || contact.signature_emoji} />
                     </div>
                     <div className="flex items-center space-x-2 mt-0.5">
                       <span className="text-[13px] text-[var(--text-muted)] font-mono">

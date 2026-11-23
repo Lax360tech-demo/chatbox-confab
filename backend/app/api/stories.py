@@ -61,11 +61,11 @@ async def get_active_stories(current_user_id: str = Depends(get_current_user_id)
     db = get_database()
     now = datetime.now(timezone.utc)
 
-    # Find active unexpired stories (created in last 24h)
+    # Find active unexpired stories (created in last 24h) in FIFO order
     cursor = db.stories.find({
         "expires_at": {"$gt": now},
         "hidden_from": {"$ne": current_user_id}
-    }).sort("created_at", -1)
+    }).sort("created_at", 1)
 
     stories = await cursor.to_list(length=200)
 
@@ -150,6 +150,18 @@ async def mark_story_viewed(story_id: str, current_user_id: str = Depends(get_cu
             "viewed_at": datetime.now(timezone.utc).isoformat()
         }
         await db.stories.update_one(query, {"$push": {"viewers": viewer_record}})
+
+        # Notify story author in real-time
+        author_id = story.get("user_id")
+        if author_id and author_id != current_user_id:
+            try:
+                await sio.emit("story_viewed", {
+                    "story_id": story_id,
+                    "viewer": viewer_record,
+                    "viewer_count": len(viewers) + 1
+                }, room=f"user:{author_id}")
+            except Exception:
+                pass
 
     return {"success": True}
 

@@ -27,7 +27,7 @@ class UserUpdateRequest(BaseModel):
     notification_settings: Optional[NotificationSettings] = None
 
 class UserThemeRequest(BaseModel):
-    theme: str = Field(..., pattern="^(night|light|ocean|lavender|forest)$")
+    theme: str = Field(..., pattern="^(night|light|ocean|lavender|forest|bw)$")
 
 class UserResponse(BaseModel):
     id: str

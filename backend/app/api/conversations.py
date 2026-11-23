@@ -119,16 +119,35 @@ async def enrich_conversation(conv: dict, current_user_id: str, db) -> dict:
     part_obj_ids = [ObjectId(p) for p in participants if ObjectId.is_valid(p)]
     users_cursor = db.users.find({"_id": {"$in": part_obj_ids}})
     user_list = await users_cursor.to_list(length=100)
+
+    # Fetch contacts of current user to apply personal contact nicknames & emojis
+    contacts_cursor = db.contacts.find({"owner_id": current_user_id})
+    user_contacts = await contacts_cursor.to_list(length=500)
+    contact_by_uid = {}
+    contact_by_phone = {}
+    for c in user_contacts:
+        if c.get("registered_user_id"):
+            contact_by_uid[str(c["registered_user_id"])] = c
+        if c.get("phone_number"):
+            contact_by_phone[c["phone_number"]] = c
     
     participant_details = []
     for u in user_list:
+        uid_str = str(u["_id"])
         privacy = u.get("privacy_settings", {})
+        matched_contact = contact_by_uid.get(uid_str) or contact_by_phone.get(u.get("phone_number"))
+        custom_name = matched_contact.get("contact_name") if matched_contact else None
+        custom_emoji = matched_contact.get("contact_emoji") if matched_contact else None
+
         participant_details.append({
-            "id": str(u["_id"]),
+            "id": uid_str,
             "full_name": u.get("full_name"),
+            "contact_name": custom_name,
+            "display_name": custom_name or u.get("full_name"),
+            "contact_emoji": custom_emoji,
+            "signature_emoji": custom_emoji or u.get("signature_emoji", "🚀"),
             "username": u.get("username"),
             "profile_picture": u.get("profile_picture", "") if privacy.get("profile_picture") != "nobody" else "",
-            "signature_emoji": u.get("signature_emoji", "🚀"),
             "online_status": u.get("online_status", False) if privacy.get("online_status") == "everyone" else False,
             "last_seen": u.get("last_seen").isoformat() if u.get("last_seen") and privacy.get("last_seen") == "everyone" else None
         })

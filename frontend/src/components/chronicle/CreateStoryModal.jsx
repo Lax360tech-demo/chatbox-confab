@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Image, Video, Type, Upload, Sparkles } from 'lucide-react';
+import { X, Image, Video, Type, Upload, Sparkles, Smile } from 'lucide-react';
 import api from '../../services/api';
+import EmojiPickerModal from '../common/EmojiPickerModal';
 
 const BG_GRADIENTS = [
   '#1e1b4b',
@@ -23,6 +24,7 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
   const [mediaType, setMediaType] = useState('image');
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   if (!isOpen) return null;
 
@@ -146,35 +148,74 @@ export default function CreateStoryModal({ isOpen, onClose, onStoryCreated }) {
 
           {/* Color palette for text mode */}
           {mode === 'text' && (
-            <div>
-              <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
-                Background Theme
-              </p>
-              <div className="flex items-center space-x-2 overflow-x-auto py-1 no-scrollbar">
-                {BG_GRADIENTS.map((bg, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setBgStyle(bg)}
-                    style={{ background: bg }}
-                    className={`w-7 h-7 rounded-full shrink-0 ring-2 cursor-pointer transition-transform hover:scale-110 ${
-                      bgStyle === bg ? 'ring-[var(--accent)] ring-offset-2' : 'ring-transparent'
-                    }`}
-                  />
-                ))}
+            <div className="flex items-center justify-between relative">
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
+                  Background Theme
+                </p>
+                <div className="flex items-center space-x-2 overflow-x-auto py-1 no-scrollbar">
+                  {BG_GRADIENTS.map((bg, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setBgStyle(bg)}
+                      style={{ background: bg }}
+                      className={`w-7 h-7 rounded-full shrink-0 ring-2 cursor-pointer transition-transform hover:scale-110 ${
+                        bgStyle === bg ? 'ring-[var(--accent)] ring-offset-2' : 'ring-transparent'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
+              <div className="shrink-0 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--accent)] text-[var(--text-primary)] transition-all cursor-pointer flex items-center space-x-1"
+                  title="Insert Emoji"
+                >
+                  <Smile size={18} className="text-[var(--accent)]" />
+                  <span className="text-xs font-medium">Emoji</span>
+                </button>
+              </div>
+              <EmojiPickerModal
+                isOpen={showEmojiPicker}
+                onClose={() => setShowEmojiPicker(false)}
+                onSelect={(emoji) => {
+                  setTextContent((prev) => (prev.length + emoji.length <= 200 ? prev + emoji : prev));
+                  setShowEmojiPicker(false);
+                }}
+                className="bottom-14 right-0"
+              />
             </div>
           )}
 
           {/* Caption for media mode */}
           {mode === 'media' && (
-            <div>
+            <div className="flex space-x-2 relative">
               <input
                 type="text"
                 placeholder="Add a caption..."
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker((prev) => !prev)}
+                className="p-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--accent)] text-[var(--text-primary)] transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title="Insert Emoji"
+              >
+                <Smile size={18} className="text-[var(--accent)]" />
+              </button>
+              <EmojiPickerModal
+                isOpen={showEmojiPicker}
+                onClose={() => setShowEmojiPicker(false)}
+                onSelect={(emoji) => {
+                  setCaption((prev) => prev + emoji);
+                  setShowEmojiPicker(false);
+                }}
+                className="bottom-14 right-0"
               />
             </div>
           )}

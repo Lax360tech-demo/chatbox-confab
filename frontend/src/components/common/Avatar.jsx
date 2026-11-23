@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ImageLightboxModal from './ImageLightboxModal';
 
-export default function Avatar({ src, name, size = 'md', isOnline = false, className = '', zoomable = false }) {
+export default function Avatar({ src, name, size = 'md', isOnline = false, className = '', zoomable = false, allowDownload = false }) {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   const sizeClasses = {
@@ -80,6 +80,7 @@ export default function Avatar({ src, name, size = 'md', isOnline = false, class
           src={src}
           alt={name ? `${name}'s Profile Picture` : 'Profile Picture'}
           onClose={() => setIsZoomOpen(false)}
+          allowDownload={allowDownload}
         />
       )}
     </>

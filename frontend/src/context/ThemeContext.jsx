@@ -6,6 +6,7 @@ const ThemeContext = createContext();
 export const THEMES = [
   { id: 'night', name: 'Night Mode', color: '#09090b', accent: '#10b981' },
   { id: 'light', name: 'Premium Light', color: '#ffffff', accent: '#059669' },
+  { id: 'bw', name: 'Black & White', color: '#ffffff', accent: '#111111' },
   { id: 'ocean', name: 'Ocean Blue', color: '#081220', accent: '#0284c7' },
   { id: 'lavender', name: 'Lavender', color: '#130e1e', accent: '#9333ea' },
   { id: 'forest', name: 'Forest Green', color: '#0a1510', accent: '#059669' },

@@ -24,6 +24,7 @@ import { formatTime } from '../../utils/formatters';
 
 export default function ChatArea({
   conversation,
+  contacts = [],
   onBack,
   onOpenDetails,
 }) {
@@ -55,9 +56,17 @@ export default function ChatArea({
       }
     : null;
 
-  const chatTitle = isGroup ? conversation?.group_details?.group_name : otherParticipant?.full_name;
+  const contactMatch = !isGroup && otherParticipant
+    ? contacts.find((ct) => ct.registered_user_id === otherParticipant.id || (ct.phone_number && ct.phone_number === otherParticipant.phone_number))
+    : null;
+
+  const chatTitle = isGroup
+    ? conversation?.group_details?.group_name
+    : (contactMatch?.contact_name || otherParticipant?.display_name || otherParticipant?.full_name);
   const chatAvatar = isGroup ? conversation?.group_details?.group_picture : otherParticipant?.profile_picture;
-  const chatEmoji = isGroup ? '👥' : otherParticipant?.signature_emoji;
+  const chatEmoji = isGroup
+    ? '👥'
+    : (contactMatch?.contact_emoji || otherParticipant?.display_emoji || otherParticipant?.signature_emoji);
   const isOtherOnline = !isGroup && (onlineUsers.has(otherParticipant?.id) || otherParticipant?.online_status);
 
   // Load messages
@@ -249,9 +258,9 @@ export default function ChatArea({
     }
     startCall({
       receiverId: otherParticipant?.id,
-      receiverName: otherParticipant?.full_name,
-      receiverAvatar: otherParticipant?.profile_picture,
-      receiverEmoji: otherParticipant?.signature_emoji,
+      receiverName: chatTitle,
+      receiverAvatar: chatAvatar,
+      receiverEmoji: chatEmoji,
       conversationId,
       callType,
     });

@@ -86,7 +86,10 @@ async def send_message(req: MessageSendRequest, current_user_id: str = Depends(g
     }
     await db.conversations.update_one(
         conv_query,
-        {"$set": {"last_message": last_msg_summary, "updated_at": now}}
+        {
+            "$set": {"last_message": last_msg_summary, "updated_at": now},
+            "$pull": {"deleted_for": {"$in": conv.get("participants", [])}}
+        }
     )
 
     serialized = serialize_doc(msg_doc)

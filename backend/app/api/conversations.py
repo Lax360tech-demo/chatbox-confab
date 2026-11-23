@@ -26,6 +26,10 @@ async def create_or_get_conversation(req: ConversationCreateRequest, current_use
             "participants": {"$all": [current_user_id, recipient_id], "$size": 2}
         })
         if existing:
+            # Unhide conversation if previously deleted by this user
+            if current_user_id in existing.get("deleted_for", []):
+                await db.conversations.update_one({"_id": existing["_id"]}, {"$pull": {"deleted_for": current_user_id}})
+                existing["deleted_for"] = [u for u in existing.get("deleted_for", []) if u != current_user_id]
             return await enrich_conversation(existing, current_user_id, db)
 
         # Create new private conversation
@@ -71,7 +75,10 @@ async def create_or_get_conversation(req: ConversationCreateRequest, current_use
 @router.get("", response_model=list[ConversationResponse])
 async def list_conversations(current_user_id: str = Depends(get_current_user_id)):
     db = get_database()
-    cursor = db.conversations.find({"participants": current_user_id}).sort("updated_at", -1)
+    cursor = db.conversations.find({
+        "participants": current_user_id,
+        "deleted_for": {"$ne": current_user_id}
+    }).sort("updated_at", -1)
     convs = await cursor.to_list(length=200)
 
     results = []
@@ -110,6 +117,37 @@ async def update_conversation_settings(conversation_id: str, req: ConversationSe
         await db.chat_settings.update_one(query, {"$set": update_data}, upsert=True)
 
     return {"success": True, "message": "Conversation settings updated"}
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(conversation_id: str, current_user_id: str = Depends(get_current_user_id)):
+    db = get_database()
+    query = {"_id": ObjectId(conversation_id)} if ObjectId.is_valid(conversation_id) else {"_id": conversation_id}
+    conv = await db.conversations.find_one(query)
+    if not conv:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+    if current_user_id not in conv.get("participants", []):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not a participant in this conversation")
+
+    # Mark conversation as deleted for current user
+    await db.conversations.update_one(query, {"$addToSet": {"deleted_for": current_user_id}})
+    
+    # Hide all existing messages in this conversation for current user
+    await db.messages.update_many(
+        {"conversation_id": conversation_id},
+        {"$addToSet": {"deleted_for": current_user_id}}
+    )
+    
+    # Clean up chat settings for this user
+    await db.chat_settings.delete_one({"user_id": current_user_id, "conversation_id": conversation_id})
+
+    # Emit socket notification
+    try:
+        from app.sockets.socket_manager import sio
+        await sio.emit("conversation_deleted", {"conversation_id": conversation_id}, room=f"user:{current_user_id}")
+    except Exception:
+        pass
+
+    return {"success": True, "message": "Conversation deleted"}
 
 async def enrich_conversation(conv: dict, current_user_id: str, db) -> dict:
     conv_id = str(conv["_id"])

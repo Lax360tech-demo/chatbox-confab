@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   X,
   Users,
+  Trash2,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +28,7 @@ export default function ChatArea({
   contacts = [],
   onBack,
   onOpenDetails,
+  onDeleteConversation,
 }) {
   const { user } = useAuth();
   const { socket, joinConversation, leaveConversation, emitTyping, onlineUsers } = useSocket();
@@ -371,6 +373,17 @@ export default function ChatArea({
           >
             <Sparkles size={19} />
           </button>
+
+          {onDeleteConversation && (
+            <button
+              type="button"
+              onClick={onDeleteConversation}
+              className="p-2 rounded-xl hover:bg-rose-500/10 text-[var(--text-secondary)] hover:text-rose-500 transition-colors cursor-pointer"
+              title="Delete this conversation"
+            >
+              <Trash2 size={19} />
+            </button>
+          )}
         </div>
       </header>
 

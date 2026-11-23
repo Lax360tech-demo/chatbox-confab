@@ -5,6 +5,7 @@ import {
   MessageCircle,
   Share2,
   Edit2,
+  Trash2,
   FolderPlus,
   Star,
   Users,
@@ -18,6 +19,7 @@ export default function ContactList({
   categories,
   onAddContact,
   onEditContact,
+  onContactDeleted,
   onStartChat,
   onManageCategories,
 }) {
@@ -172,6 +174,22 @@ export default function ContactList({
                     title="Edit Contact"
                   >
                     <Edit2 size={15} />
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Delete ${contact.contact_name} from contacts?`)) return;
+                      try {
+                        await api.delete(`/contacts/${contact.id}`);
+                        if (onContactDeleted) onContactDeleted(contact.id);
+                      } catch {
+                        alert('Failed to delete contact');
+                      }
+                    }}
+                    className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-colors"
+                    title="Delete Contact"
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>

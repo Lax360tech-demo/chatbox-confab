@@ -13,6 +13,7 @@ import {
   CheckCheck,
   Compass,
   MoreVertical,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -112,11 +113,19 @@ export default function ChatDashboard() {
       fetchConversations();
     };
 
+    const handleConversationDeleted = ({ conversation_id }) => {
+      setConversations((prev) => prev.filter((c) => c.id !== conversation_id));
+      if (selectedConversation?.id === conversation_id) {
+        setSelectedConversation(null);
+      }
+    };
+
     socket.on('conversation_update', handleUpdate);
     socket.on('receive_message', handleUpdate);
     socket.on('group_created', handleUpdate);
     socket.on('contact_updated', handleContactUpdated);
     socket.on('contact_deleted', handleContactDeleted);
+    socket.on('conversation_deleted', handleConversationDeleted);
 
     return () => {
       socket.off('conversation_update', handleUpdate);
@@ -124,8 +133,23 @@ export default function ChatDashboard() {
       socket.off('group_created', handleUpdate);
       socket.off('contact_updated', handleContactUpdated);
       socket.off('contact_deleted', handleContactDeleted);
+      socket.off('conversation_deleted', handleConversationDeleted);
     };
   }, [socket]);
+
+  // Delete recent conversation
+  const handleDeleteConversation = async (conversationId, title) => {
+    if (!window.confirm(`Delete conversation with ${title || 'this contact'}? This will remove it from your recent chats.`)) return;
+    try {
+      await api.delete(`/conversations/${conversationId}`);
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(null);
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to delete conversation');
+    }
+  };
 
   // Handle starting a 1-to-1 conversation from contact list
   const handleStartChatWithUser = async (targetUserId) => {
@@ -285,7 +309,7 @@ export default function ChatDashboard() {
                     <div
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv)}
-                      className={`p-3 sm:px-3.5 sm:py-3 flex items-center space-x-3 transition-colors cursor-pointer ${
+                      className={`p-3 sm:px-3.5 sm:py-3 flex items-center space-x-3 transition-colors cursor-pointer group relative ${
                         isSelected
                           ? 'bg-[var(--accent-light)] border-l-4 border-[var(--accent)]'
                           : 'hover:bg-[var(--bg-hover)]'
@@ -324,6 +348,17 @@ export default function ChatDashboard() {
                                 {conv.unread_count}
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteConversation(conv.id, title);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                              title="Delete conversation"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -341,6 +376,10 @@ export default function ChatDashboard() {
             onEditContact={(contact) => {
               setEditingContact(contact);
               setShowEditContact(true);
+            }}
+            onContactDeleted={() => {
+              fetchContacts();
+              fetchConversations();
             }}
             onStartChat={handleStartChatWithUser}
             onManageCategories={() => {}}
@@ -390,6 +429,14 @@ export default function ChatDashboard() {
             contacts={contacts}
             onBack={() => setSelectedConversation(null)}
             onOpenDetails={() => setShowRightPanel(!showRightPanel)}
+            onDeleteConversation={() => {
+              const otherPart = selectedConversation.participant_details?.find((p) => p.id !== user?.id);
+              const contactMatch = contacts.find((ct) => ct.registered_user_id === otherPart?.id || ct.phone_number === otherPart?.phone_number);
+              const title = selectedConversation.type === 'group'
+                ? selectedConversation.group_details?.group_name
+                : (contactMatch?.contact_name || otherPart?.display_name || otherPart?.full_name);
+              handleDeleteConversation(selectedConversation.id, title);
+            }}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">

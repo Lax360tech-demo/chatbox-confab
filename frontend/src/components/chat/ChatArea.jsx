@@ -110,6 +110,10 @@ export default function ChatArea({
           return [...prev, newMsg];
         });
         scrollToBottom();
+        // Immediately mark read if the chat is open and message is from another user
+        if (newMsg.sender_id !== user?.id) {
+          api.post(`/messages/${newMsg.id}/read`).catch(() => {});
+        }
       }
     };
 
@@ -140,10 +144,15 @@ export default function ChatArea({
     const handleMessageRead = (data) => {
       if (data.conversation_id === conversationId) {
         setMessages((prev) =>
-          prev.map((m) => ({
-            ...m,
-            read_by: [...new Set([...(m.read_by || []), data.read_by_user_id])],
-          }))
+          prev.map((m) => {
+            if (data.message_ids?.length && !data.message_ids.includes(m.id)) {
+              return m;
+            }
+            return {
+              ...m,
+              read_by: [...new Set([...(m.read_by || []), data.read_by_user_id])],
+            };
+          })
         );
       }
     };

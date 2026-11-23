@@ -10,6 +10,17 @@ from app.utils.helpers import serialize_doc
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
+async def broadcast_to_conversation_and_participants(db, conv_id: str, event: str, data: dict):
+    try:
+        await sio.emit(event, data, room=f"conv:{conv_id}")
+        query = {"_id": ObjectId(conv_id)} if ObjectId.is_valid(conv_id) else {"_id": conv_id}
+        conv = await db.conversations.find_one(query)
+        if conv:
+            for p in conv.get("participants", []):
+                await sio.emit(event, data, room=f"user:{p}")
+    except Exception:
+        pass
+
 @router.post("", response_model=MessageResponse)
 async def send_message(req: MessageSendRequest, current_user_id: str = Depends(get_current_user_id)):
     db = get_database()
@@ -175,14 +186,11 @@ async def get_messages(
                 "$set": {"viewed_at": viewed_now, "expires_at": expires_at}
             }
         )
-        try:
-            await sio.emit("message_read", {
-                "conversation_id": conversation_id,
-                "read_by_user_id": current_user_id,
-                "message_ids": [str(mid) for mid in unread_msg_ids]
-            }, room=f"conv:{conversation_id}")
-        except Exception:
-            pass
+        await broadcast_to_conversation_and_participants(db, conversation_id, "message_read", {
+            "conversation_id": conversation_id,
+            "read_by_user_id": current_user_id,
+            "message_ids": [str(mid) for mid in unread_msg_ids]
+        })
 
     return [serialize_doc(m) for m in raw_messages]
 
@@ -204,12 +212,28 @@ async def edit_message(message_id: str, req: MessageEditRequest, current_user_id
 
     updated_msg = await db.messages.find_one(query)
     serialized = serialize_doc(updated_msg)
+    conv_id = msg["conversation_id"]
 
-    try:
-        await sio.emit("message_edited", serialized, room=f"conv:{msg['conversation_id']}")
-    except Exception:
-        pass
+    # Check if this was conversation's last_message
+    c_query = {"_id": ObjectId(conv_id)} if ObjectId.is_valid(conv_id) else {"_id": conv_id}
+    conv_obj = await db.conversations.find_one(c_query)
+    if conv_obj and conv_obj.get("last_message", {}).get("id") == message_id:
+        updated_summary = {
+            "id": message_id,
+            "sender_id": current_user_id,
+            "sender_name": conv_obj["last_message"].get("sender_name", ""),
+            "content": req.content.strip(),
+            "message_type": msg.get("message_type", "text"),
+            "created_at": msg.get("created_at").isoformat() if isinstance(msg.get("created_at"), datetime) else str(msg.get("created_at", ""))
+        }
+        await db.conversations.update_one(c_query, {"$set": {"last_message": updated_summary}})
+        for p in conv_obj.get("participants", []):
+            try:
+                await sio.emit("conversation_update", {"conversation_id": conv_id, "last_message": updated_summary}, room=f"user:{p}")
+            except Exception:
+                pass
 
+    await broadcast_to_conversation_and_participants(db, conv_id, "message_edited", serialized)
     return serialized
 
 @router.post("/{message_id}/react")
@@ -241,14 +265,11 @@ async def react_to_message(message_id: str, req: MessageReactionRequest, current
 
     await db.messages.update_one(query, {"$set": {"reactions": reactions}})
     
-    try:
-        await sio.emit("message_reaction", {
-            "message_id": message_id,
-            "conversation_id": msg["conversation_id"],
-            "reactions": reactions
-        }, room=f"conv:{msg['conversation_id']}")
-    except Exception:
-        pass
+    await broadcast_to_conversation_and_participants(db, msg["conversation_id"], "message_reaction", {
+        "message_id": message_id,
+        "conversation_id": msg["conversation_id"],
+        "reactions": reactions
+    })
 
     return {"success": True, "reactions": reactions}
 
@@ -263,14 +284,11 @@ async def toggle_pin_message(message_id: str, current_user_id: str = Depends(get
     new_pinned = not msg.get("is_pinned", False)
     await db.messages.update_one(query, {"$set": {"is_pinned": new_pinned}})
     
-    try:
-        await sio.emit("message_pinned", {
-            "message_id": message_id,
-            "conversation_id": msg["conversation_id"],
-            "is_pinned": new_pinned
-        }, room=f"conv:{msg['conversation_id']}")
-    except Exception:
-        pass
+    await broadcast_to_conversation_and_participants(db, msg["conversation_id"], "message_pinned", {
+        "message_id": message_id,
+        "conversation_id": msg["conversation_id"],
+        "is_pinned": new_pinned
+    })
 
     return {"success": True, "is_pinned": new_pinned}
 
@@ -294,6 +312,7 @@ async def delete_message(message_id: str, req: MessageDeleteRequest, current_use
     if not msg:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
 
+    conv_id = msg["conversation_id"]
     if req.delete_for == "everyone":
         if msg.get("sender_id") != current_user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own message for everyone")
@@ -301,20 +320,43 @@ async def delete_message(message_id: str, req: MessageDeleteRequest, current_use
             query,
             {"$set": {"deleted_for_everyone": True, "content": "This message was deleted."}}
         )
-        try:
-            await sio.emit("message_deleted", {
-                "message_id": message_id,
-                "conversation_id": msg["conversation_id"],
-                "delete_for": "everyone"
-            }, room=f"conv:{msg['conversation_id']}")
-        except Exception:
-            pass
+        c_query = {"_id": ObjectId(conv_id)} if ObjectId.is_valid(conv_id) else {"_id": conv_id}
+        conv_obj = await db.conversations.find_one(c_query)
+        if conv_obj and conv_obj.get("last_message", {}).get("id") == message_id:
+            updated_summary = {
+                "id": message_id,
+                "sender_id": current_user_id,
+                "sender_name": conv_obj["last_message"].get("sender_name", ""),
+                "content": "This message was deleted.",
+                "message_type": msg.get("message_type", "text"),
+                "created_at": msg.get("created_at").isoformat() if isinstance(msg.get("created_at"), datetime) else str(msg.get("created_at", ""))
+            }
+            await db.conversations.update_one(c_query, {"$set": {"last_message": updated_summary}})
+            for p in conv_obj.get("participants", []):
+                try:
+                    await sio.emit("conversation_update", {"conversation_id": conv_id, "last_message": updated_summary}, room=f"user:{p}")
+                except Exception:
+                    pass
+
+        await broadcast_to_conversation_and_participants(db, conv_id, "message_deleted", {
+            "message_id": message_id,
+            "conversation_id": conv_id,
+            "delete_for": "everyone"
+        })
     else:
         # Delete for me
         await db.messages.update_one(
             query,
             {"$addToSet": {"deleted_for": current_user_id}}
         )
+        try:
+            await sio.emit("message_deleted", {
+                "message_id": message_id,
+                "conversation_id": conv_id,
+                "delete_for": "me"
+            }, room=f"user:{current_user_id}")
+        except Exception:
+            pass
 
     return {"success": True, "message": "Message deleted"}
 
@@ -331,13 +373,10 @@ async def mark_message_read(message_id: str, current_user_id: str = Depends(get_
         {"$addToSet": {"read_by": current_user_id, "delivered_to": current_user_id}}
     )
 
-    try:
-        await sio.emit("message_read", {
-            "conversation_id": msg["conversation_id"],
-            "read_by_user_id": current_user_id,
-            "message_ids": [message_id]
-        }, room=f"conv:{msg['conversation_id']}")
-    except Exception:
-        pass
+    await broadcast_to_conversation_and_participants(db, msg["conversation_id"], "message_read", {
+        "conversation_id": msg["conversation_id"],
+        "read_by_user_id": current_user_id,
+        "message_ids": [message_id]
+    })
 
     return {"success": True}

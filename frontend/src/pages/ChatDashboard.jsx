@@ -57,6 +57,7 @@ export default function ChatDashboard() {
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [activeStoryData, setActiveStoryData] = useState(null);
+  const [chronicleRefreshTrigger, setChronicleRefreshTrigger] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
 
   // Fetch conversations
@@ -104,7 +105,13 @@ export default function ChatDashboard() {
     };
 
     const handleContactUpdated = (updatedContact) => {
-      setContacts((prev) => prev.map((c) => (c.id === updatedContact.id ? updatedContact : c)));
+      setContacts((prev) => {
+        const idx = prev.findIndex((c) => c.id === updatedContact.id);
+        if (idx !== -1) {
+          return prev.map((c) => (c.id === updatedContact.id ? updatedContact : c));
+        }
+        return [...prev, updatedContact];
+      });
       fetchConversations();
     };
 
@@ -120,22 +127,69 @@ export default function ChatDashboard() {
       }
     };
 
+    const handleUserProfileUpdated = (updatedUser) => {
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.registered_user_id === updatedUser.id
+            ? {
+                ...c,
+                profile_picture: updatedUser.profile_picture,
+                username: updatedUser.username,
+                about: updatedUser.about,
+                signature_emoji: updatedUser.signature_emoji,
+              }
+            : c
+        )
+      );
+      setConversations((prev) =>
+        prev.map((conv) => {
+          const parts = conv.participant_details?.map((p) =>
+            p.id === updatedUser.id
+              ? {
+                  ...p,
+                  full_name: updatedUser.full_name,
+                  display_name: p.contact_name || updatedUser.full_name,
+                  profile_picture: updatedUser.profile_picture,
+                  username: updatedUser.username,
+                  signature_emoji: p.contact_emoji || updatedUser.signature_emoji,
+                }
+              : p
+          );
+          return { ...conv, participant_details: parts };
+        })
+      );
+    };
+
+    const handleMessageRead = ({ conversation_id, read_by_user_id }) => {
+      if (read_by_user_id === user?.id) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversation_id ? { ...c, unread_count: 0 } : c))
+        );
+      }
+    };
+
     socket.on('conversation_update', handleUpdate);
     socket.on('receive_message', handleUpdate);
     socket.on('group_created', handleUpdate);
+    socket.on('group_updated', handleUpdate);
     socket.on('contact_updated', handleContactUpdated);
     socket.on('contact_deleted', handleContactDeleted);
     socket.on('conversation_deleted', handleConversationDeleted);
+    socket.on('user_profile_updated', handleUserProfileUpdated);
+    socket.on('message_read', handleMessageRead);
 
     return () => {
       socket.off('conversation_update', handleUpdate);
       socket.off('receive_message', handleUpdate);
       socket.off('group_created', handleUpdate);
+      socket.off('group_updated', handleUpdate);
       socket.off('contact_updated', handleContactUpdated);
       socket.off('contact_deleted', handleContactDeleted);
       socket.off('conversation_deleted', handleConversationDeleted);
+      socket.off('user_profile_updated', handleUserProfileUpdated);
+      socket.off('message_read', handleMessageRead);
     };
-  }, [socket]);
+  }, [socket, user?.id]);
 
   // Delete recent conversation
   const handleDeleteConversation = async (conversationId, title) => {
@@ -388,6 +442,7 @@ export default function ChatDashboard() {
           <CallsPage />
         ) : activeTab === 'chronicle' ? (
           <ChroniclePage
+            key={chronicleRefreshTrigger}
             onOpenCreate={() => setShowCreateStory(true)}
             onOpenViewer={(storyItem) => {
               setActiveStoryData(storyItem);
@@ -507,7 +562,9 @@ export default function ChatDashboard() {
       <CreateStoryModal
         isOpen={showCreateStory}
         onClose={() => setShowCreateStory(false)}
-        onStoryCreated={() => {}}
+        onStoryCreated={() => {
+          setChronicleRefreshTrigger((prev) => prev + 1);
+        }}
       />
 
       <ChronicleViewerModal

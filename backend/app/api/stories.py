@@ -206,4 +206,11 @@ async def delete_story(story_id: str, current_user_id: str = Depends(get_current
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own stories")
 
     await db.stories.delete_one(query)
+
+    # Real-time synchronization: notify connected clients that story was deleted
+    try:
+        await sio.emit("story_deleted", {"story_id": story_id, "user_id": current_user_id})
+    except Exception:
+        pass
+
     return {"success": True, "message": "Story deleted"}

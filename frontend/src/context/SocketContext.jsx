@@ -10,6 +10,7 @@ export function SocketProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const socketRef = useRef(null);
+  const activeConversationIdRef = useRef(null);
 
   useEffect(() => {
     if (!token || !user) {
@@ -38,13 +39,24 @@ export function SocketProvider({ children }) {
       auth: { token },
       path: '/socket.io',
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 1000,
     });
 
     s.on('connect', () => {
       console.log('Socket.IO connected:', s.id);
       setConnected(true);
+      if (activeConversationIdRef.current) {
+        s.emit('join_conversation', { conversation_id: activeConversationIdRef.current });
+      }
+    });
+
+    s.io.on('reconnect', () => {
+      console.log('Socket.IO reconnected:', s.id);
+      setConnected(true);
+      if (activeConversationIdRef.current) {
+        s.emit('join_conversation', { conversation_id: activeConversationIdRef.current });
+      }
     });
 
     s.on('disconnect', () => {
@@ -73,12 +85,16 @@ export function SocketProvider({ children }) {
   }, [token, user?.id]);
 
   const joinConversation = (conversationId) => {
+    activeConversationIdRef.current = conversationId;
     if (socketRef.current) {
       socketRef.current.emit('join_conversation', { conversation_id: conversationId });
     }
   };
 
   const leaveConversation = (conversationId) => {
+    if (activeConversationIdRef.current === conversationId) {
+      activeConversationIdRef.current = null;
+    }
     if (socketRef.current) {
       socketRef.current.emit('leave_conversation', { conversation_id: conversationId });
     }

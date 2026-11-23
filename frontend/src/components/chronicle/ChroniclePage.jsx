@@ -34,11 +34,19 @@ export default function ChroniclePage({ onOpenCreate, onOpenViewer }) {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('story_created', () => {
+    const handleStoryUpdate = () => {
       fetchChronicles();
-    });
+    };
+    socket.on('story_created', handleStoryUpdate);
+    socket.on('story_deleted', handleStoryUpdate);
+    socket.on('story_viewed', handleStoryUpdate);
+    socket.on('story_reacted', handleStoryUpdate);
+
     return () => {
-      socket.off('story_created');
+      socket.off('story_created', handleStoryUpdate);
+      socket.off('story_deleted', handleStoryUpdate);
+      socket.off('story_viewed', handleStoryUpdate);
+      socket.off('story_reacted', handleStoryUpdate);
     };
   }, [socket]);
 

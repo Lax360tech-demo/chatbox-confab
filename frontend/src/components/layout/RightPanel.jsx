@@ -16,10 +16,12 @@ import Avatar from '../common/Avatar';
 import SignatureEmoji from '../common/SignatureEmoji';
 import { useAuth } from '../../context/AuthContext';
 import { useCall } from '../../context/CallContext';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 
 export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const { startCall } = useCall();
   const [group, setGroup] = useState(null);
   const [activeTab, setActiveTab] = useState('members'); // 'members', 'media'
@@ -53,6 +55,26 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
     }
   }, [conversation?.id]);
 
+  // Real-time group updates without reload
+  useEffect(() => {
+    if (!socket || !isGroup) return;
+
+    const handleGroupSync = () => {
+      fetchGroup();
+      if (onGroupUpdated) onGroupUpdated();
+    };
+
+    socket.on('member_added', handleGroupSync);
+    socket.on('member_removed', handleGroupSync);
+    socket.on('group_updated', handleGroupSync);
+
+    return () => {
+      socket.off('member_added', handleGroupSync);
+      socket.off('member_removed', handleGroupSync);
+      socket.off('group_updated', handleGroupSync);
+    };
+  }, [socket, isGroup, conversation?.group_id]);
+
   if (!conversation) return null;
 
   const isAdmin = isGroup && (group?.admins?.includes(user?.id) || group?.creator_id === user?.id);
@@ -62,6 +84,7 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
       await api.post(`/groups/${conversation.group_id}/members`, { user_id: targetUserId });
       fetchGroup();
       setShowAddMember(false);
+      if (onGroupUpdated) onGroupUpdated();
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to add member');
     }
@@ -72,6 +95,7 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
     try {
       await api.delete(`/groups/${conversation.group_id}/members/${targetUserId}`);
       fetchGroup();
+      if (onGroupUpdated) onGroupUpdated();
     } catch {
       alert('Failed to remove member');
     }
@@ -82,7 +106,7 @@ export default function RightPanel({ conversation, onClose, onGroupUpdated }) {
     try {
       await api.post(`/groups/${conversation.group_id}/leave`);
       onClose();
-      window.location.reload();
+      if (onGroupUpdated) onGroupUpdated();
     } catch {
       alert('Failed to leave group');
     }

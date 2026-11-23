@@ -166,8 +166,61 @@ def run_tests():
     assert r.status_code == 200
     print("Theme switched to ocean successfully!")
 
+    print("\n>>> 17. Testing Black & White (bw) Theme persistence...")
+    r = client.put(f"{BASE_URL}/users/theme", json={"theme": "bw"}, headers=headers1)
+    assert r.status_code == 200, f"BW theme failed: {r.text}"
+    print("Theme switched to 'bw' successfully!")
+
+    print("\n>>> 18. Testing User Profile Update & Persistence...")
+    r = client.put(f"{BASE_URL}/users/me", json={
+        "full_name": "Rajesh Kumar (Pioneer)",
+        "about": "Building the future of messaging on Confab.",
+        "signature_emoji": "🚀"
+    }, headers=headers1)
+    assert r.status_code == 200, f"Profile update failed: {r.text}"
+    updated_profile = r.json()
+    assert updated_profile["full_name"] == "Rajesh Kumar (Pioneer)"
+    print("User profile updated and verified:", updated_profile["full_name"])
+
+    print("\n>>> 19. Testing Contact Nickname & Emoji Update...")
+    r = client.put(f"{BASE_URL}/contacts/{contact_priya['id']}", json={
+        "contact_name": "Priya Bestie",
+        "contact_emoji": "🌟"
+    }, headers=headers1)
+    assert r.status_code == 200, f"Contact update failed: {r.text}"
+    updated_c = r.json()
+    assert updated_c["contact_name"] == "Priya Bestie"
+    assert updated_c["contact_emoji"] == "🌟"
+    print("Contact nickname & emoji updated:", updated_c["contact_name"], updated_c["contact_emoji"])
+
+    print("\n>>> 20. Testing Message Edit & Read Receipts...")
+    r = client.put(f"{BASE_URL}/messages/{msg_id}", json={
+        "content": "Hello Priya! Edited in real-time without refresh! 🚀"
+    }, headers=headers1)
+    assert r.status_code == 200, f"Message edit failed: {r.text}"
+    print("Message edited successfully!")
+
+    r = client.post(f"{BASE_URL}/messages/{msg_id}/read", headers=headers2)
+    assert r.status_code == 200, f"Mark read failed: {r.text}"
+    print("Message marked as read by recipient!")
+
+    print("\n>>> 21. Testing Message Deletion (delete for everyone)...")
+    r = client.request("DELETE", f"{BASE_URL}/messages/{msg_id}", json={"delete_for": "everyone"}, headers=headers1)
+    assert r.status_code == 200, f"Delete message failed: {r.text}"
+    print("Message deleted for everyone!")
+
+    print("\n>>> 22. Testing Chronicle Story Deletion...")
+    r = client.delete(f"{BASE_URL}/stories/{story_id}", headers=headers1)
+    assert r.status_code == 200, f"Delete story failed: {r.text}"
+    print("Chronicle deleted successfully!")
+
+    print("\n>>> 23. Testing Delete Recent Conversation...")
+    r = client.delete(f"{BASE_URL}/conversations/{conv_id}", headers=headers1)
+    assert r.status_code == 200, f"Delete conversation failed: {r.text}"
+    print("Conversation deleted from User 1 recent list successfully!")
+
     print("\n=======================================================")
-    print("  ALL 16 BACKEND END-TO-END TESTS PASSED SUCCESSFULLY!  ")
+    print("  ALL 23 BACKEND END-TO-END TESTS PASSED SUCCESSFULLY!  ")
     print("=======================================================")
 
 if __name__ == "__main__":

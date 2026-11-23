@@ -136,13 +136,16 @@ async def update_group(group_id: str, req: GroupUpdateRequest, current_user_id: 
     updated_group = await db.groups.find_one(query)
     updated_group["id"] = str(updated_group["_id"])
 
-    # Broadcast update to group room
+    # Broadcast update to group room and member user rooms
     conv = await db.conversations.find_one({"type": "group", "group_id": group_id})
     if conv:
         conv_id = str(conv["_id"])
         updated_group["conversation_id"] = conv_id
+        ser = serialize_doc(updated_group)
         try:
-            await sio.emit("group_updated", serialize_doc(updated_group), room=f"conv:{conv_id}")
+            await sio.emit("group_updated", ser, room=f"conv:{conv_id}")
+            for m in updated_group.get("members", []):
+                await sio.emit("group_updated", ser, room=f"user:{m}")
         except Exception:
             pass
 
@@ -170,7 +173,9 @@ async def add_group_member(group_id: str, req: GroupMemberActionRequest, current
     if conv:
         try:
             await sio.emit("member_added", {"group_id": group_id, "user_id": target_user_id}, room=f"conv:{str(conv['_id'])}")
-            await sio.emit("group_created", {"group_id": group_id}, room=f"user:{target_user_id}")
+            await sio.emit("group_created", {"group_id": group_id, "conversation_id": str(conv["_id"])}, room=f"user:{target_user_id}")
+            for m in group.get("members", []):
+                await sio.emit("group_updated", {"group_id": group_id, "conversation_id": str(conv["_id"])}, room=f"user:{m}")
         except Exception:
             pass
 
@@ -195,6 +200,10 @@ async def remove_group_member(group_id: str, user_id: str, current_user_id: str 
     if conv:
         try:
             await sio.emit("member_removed", {"group_id": group_id, "user_id": user_id}, room=f"conv:{str(conv['_id'])}")
+            await sio.emit("conversation_deleted", {"conversation_id": str(conv["_id"])}, room=f"user:{user_id}")
+            for m in group.get("members", []):
+                if m != user_id:
+                    await sio.emit("group_updated", {"group_id": group_id, "conversation_id": str(conv["_id"])}, room=f"user:{m}")
         except Exception:
             pass
 
@@ -215,6 +224,10 @@ async def leave_group(group_id: str, current_user_id: str = Depends(get_current_
     if conv:
         try:
             await sio.emit("member_removed", {"group_id": group_id, "user_id": current_user_id}, room=f"conv:{str(conv['_id'])}")
+            await sio.emit("conversation_deleted", {"conversation_id": str(conv["_id"])}, room=f"user:{current_user_id}")
+            for m in group.get("members", []):
+                if m != current_user_id:
+                    await sio.emit("group_updated", {"group_id": group_id, "conversation_id": str(conv["_id"])}, room=f"user:{m}")
         except Exception:
             pass
 

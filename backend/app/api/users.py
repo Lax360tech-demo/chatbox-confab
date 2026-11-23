@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.database.mongodb import get_database
 from app.core.security import get_current_user_id
 from app.schemas.user import UserUpdateRequest, UserThemeRequest, UserResponse
+from app.sockets.socket_manager import sio
 from app.utils.helpers import serialize_doc
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -52,13 +53,25 @@ async def update_my_profile(req: UserUpdateRequest, current_user_id: str = Depen
     await db.users.update_one(query, {"$set": update_data})
     updated_user = await db.users.find_one(query)
     updated_user["id"] = str(updated_user["_id"])
-    return serialize_doc(updated_user)
+    serialized = serialize_doc(updated_user)
+
+    # Real-time synchronization: notify connected clients that user's profile updated
+    try:
+        await sio.emit("user_profile_updated", serialized)
+    except Exception:
+        pass
+
+    return serialized
 
 @router.put("/theme")
 async def update_theme(req: UserThemeRequest, current_user_id: str = Depends(get_current_user_id)):
     db = get_database()
     query = {"_id": ObjectId(current_user_id)} if ObjectId.is_valid(current_user_id) else {"_id": current_user_id}
     await db.users.update_one(query, {"$set": {"theme": req.theme, "updated_at": datetime.now(timezone.utc)}})
+    try:
+        await sio.emit("user_theme_updated", {"user_id": current_user_id, "theme": req.theme}, room=f"user:{current_user_id}")
+    except Exception:
+        pass
     return {"success": True, "theme": req.theme}
 
 @router.get("/search")

@@ -11,7 +11,7 @@ export default function WelcomePage() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between max-w-6xl mx-auto w-full">
         <div className="flex items-center space-x-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[var(--accent)] to-purple-500 text-white flex items-center justify-center shadow-lg shadow-[var(--accent)]/30">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[var(--accent)] to-teal-400 text-white flex items-center justify-center shadow-lg shadow-[var(--accent)]/30">
             <Sparkles size={24} />
           </div>
           <div>

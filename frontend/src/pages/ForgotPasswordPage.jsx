@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen w-full bg-[var(--bg-main)] flex items-center justify-center p-4 sm:p-6 select-none">
       <div className="w-full max-w-md bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-3xl shadow-2xl p-6 sm:p-8">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[var(--accent)] to-purple-500 text-white flex items-center justify-center shadow-lg mb-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[var(--accent)] to-teal-400 text-white flex items-center justify-center shadow-lg shadow-[var(--accent)]/20 mb-3">
             <Sparkles size={24} />
           </div>
           <h2 className="text-2xl font-bold text-[var(--text-primary)]">Reset Password</h2>

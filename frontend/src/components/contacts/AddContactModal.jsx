@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, UserPlus, MessageCircle, Share2, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, UserPlus, MessageCircle, Share2, Check, AlertCircle, Sparkles } from 'lucide-react';
 import api from '../../services/api';
 import Avatar from '../common/Avatar';
 import SignatureEmoji from '../common/SignatureEmoji';
@@ -12,6 +12,36 @@ export default function AddContactModal({ isOpen, onClose, onContactAdded, onSta
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [savedContact, setSavedContact] = useState(null);
+  const [liveCheck, setLiveCheck] = useState({ checking: false, registered: null, user: null });
+
+  // Debounced live registration check while typing phone number
+  useEffect(() => {
+    const rawDigits = mobileNumber.replace(/\D/g, '');
+    if (rawDigits.length < 10) {
+      setLiveCheck({ checking: false, registered: null, user: null });
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLiveCheck((prev) => ({ ...prev, checking: true }));
+      try {
+        const fullPhone = `${countryCode}${rawDigits}`;
+        const res = await api.get(`/contacts/check-registration?phone=${encodeURIComponent(fullPhone)}`);
+        if (res.data.is_registered) {
+          setLiveCheck({ checking: false, registered: true, user: res.data.user });
+          if (!name && res.data.user?.full_name) {
+            setName(res.data.user.full_name);
+          }
+        } else {
+          setLiveCheck({ checking: false, registered: false, user: null });
+        }
+      } catch {
+        setLiveCheck({ checking: false, registered: null, user: null });
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [mobileNumber, countryCode]);
 
   if (!isOpen) return null;
 
@@ -178,9 +208,30 @@ export default function AddContactModal({ isOpen, onClose, onContactAdded, onSta
                     className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-sm"
                   />
                 </div>
-                <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                  Supports +91 (India) and all international country codes.
-                </p>
+                {liveCheck.checking && (
+                  <p className="text-[11px] text-[var(--accent)] mt-1.5 flex items-center space-x-1 animate-pulse">
+                    <span>Checking Confab registration status...</span>
+                  </p>
+                )}
+                {!liveCheck.checking && liveCheck.registered === true && (
+                  <div className="mt-2 p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
+                    <span className="flex items-center space-x-1.5 font-medium">
+                      <span>✨ On Confab: <b>@{liveCheck.user?.username}</b></span>
+                      <SignatureEmoji emoji={liveCheck.user?.signature_emoji} />
+                    </span>
+                    <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-bold uppercase">Ready to Chat</span>
+                  </div>
+                )}
+                {!liveCheck.checking && liveCheck.registered === false && (
+                  <p className="text-[11px] text-amber-400/90 mt-1.5 flex items-center space-x-1">
+                    <span>ℹ️ Not on Confab yet (You can invite them once saved).</span>
+                  </p>
+                )}
+                {!liveCheck.checking && liveCheck.registered === null && (
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                    Supports +91 (India) and all international country codes.
+                  </p>
+                )}
               </div>
 
               <div>

@@ -102,8 +102,15 @@ async def register(req: RegisterRequest):
     user_id = str(insert_result.inserted_id)
 
     # Important requirement: Automatically update any saved contacts holding this mobile number to registered!
+    import re
+    digits = re.sub(r'[^\d]', '', phone)[-10:] if len(re.sub(r'[^\d]', '', phone)) >= 10 else re.sub(r'[^\d]', '', phone)
     await db.contacts.update_many(
-        {"phone_number": phone},
+        {"$or": [
+            {"phone_number": phone},
+            {"phone_number": f"+{digits}"},
+            {"phone_number": digits},
+            {"phone_number": {"$regex": f"{digits}$"}}
+        ]},
         {"$set": {"registration_status": "registered", "registered_user_id": user_id}}
     )
 

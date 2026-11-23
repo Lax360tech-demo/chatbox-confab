@@ -1,12 +1,33 @@
 from datetime import datetime, timezone
+import re
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.database.mongodb import get_database
 from app.core.security import get_current_user_id
 from app.schemas.contact import ContactCreateRequest, ContactUpdateRequest, ContactResponse, CategoryCreateRequest, CategoryResponse
-from app.utils.helpers import clean_phone_number, validate_phone_number, serialize_doc
+from app.utils.helpers import clean_phone_number, validate_phone_number, get_phone_search_filter, serialize_doc
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
+
+@router.get("/check-registration")
+async def check_registration(phone: str = Query(..., description="Mobile number to check")):
+    db = get_database()
+    filter_q = get_phone_search_filter(phone)
+    user = await db.users.find_one(filter_q)
+    if user:
+        return {
+            "is_registered": True,
+            "user": {
+                "id": str(user["_id"]),
+                "full_name": user.get("full_name"),
+                "username": user.get("username"),
+                "profile_picture": user.get("profile_picture", ""),
+                "signature_emoji": user.get("signature_emoji", "🚀"),
+                "about": user.get("about", ""),
+                "phone_number": user.get("phone_number")
+            }
+        }
+    return {"is_registered": False, "user": None}
 
 @router.post("", response_model=ContactResponse)
 async def add_contact(req: ContactCreateRequest, current_user_id: str = Depends(get_current_user_id)):
@@ -28,25 +49,42 @@ async def add_contact(req: ContactCreateRequest, current_user_id: str = Depends(
             detail="You cannot add your own mobile number as a contact."
         )
 
-    # 3. Check if contact already saved by this user
-    existing_contact = await db.contacts.find_one({
-        "owner_id": current_user_id,
-        "phone_number": normalized_phone
-    })
-    if existing_contact:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This contact is already saved."
-        )
+    # 3. Check whether mobile number belongs to an existing registered Confab user
+    registered_user = await db.users.find_one(get_phone_search_filter(normalized_phone))
 
-    # 4. Check whether mobile number belongs to an existing registered Confab user
-    registered_user = await db.users.find_one({"phone_number": normalized_phone})
+    # 4. Check if contact already saved by this user
+    phone_filter = get_phone_search_filter(normalized_phone)
+    phone_filter["owner_id"] = current_user_id
+    existing_contact = await db.contacts.find_one(phone_filter)
     
+    if existing_contact:
+        # Instead of blocking the user, refresh and update the existing contact's registration status!
+        update_data = {
+            "updated_at": datetime.now(timezone.utc),
+            "contact_name": req.contact_name.strip() or existing_contact.get("contact_name")
+        }
+        if registered_user:
+            update_data["registration_status"] = "registered"
+            update_data["registered_user_id"] = str(registered_user["_id"])
+            update_data["phone_number"] = registered_user.get("phone_number", normalized_phone)
+        
+        await db.contacts.update_one({"_id": existing_contact["_id"]}, {"$set": update_data})
+        updated = await db.contacts.find_one({"_id": existing_contact["_id"]})
+        updated["id"] = str(updated["_id"])
+        if registered_user:
+            updated["profile_picture"] = registered_user.get("profile_picture", "")
+            updated["username"] = registered_user.get("username", "")
+            updated["signature_emoji"] = registered_user.get("signature_emoji", "🚀")
+            updated["about"] = registered_user.get("about", "")
+            updated["online_status"] = registered_user.get("online_status", False)
+            updated["last_seen"] = registered_user.get("last_seen").isoformat() if registered_user.get("last_seen") else None
+        return serialize_doc(updated)
+
     now = datetime.now(timezone.utc)
     contact_doc = {
         "owner_id": current_user_id,
         "contact_name": req.contact_name.strip(),
-        "phone_number": normalized_phone,
+        "phone_number": registered_user["phone_number"] if registered_user else normalized_phone,
         "country_code": req.country_code.strip(),
         "registered_user_id": str(registered_user["_id"]) if registered_user else None,
         "registration_status": "registered" if registered_user else "unregistered",
@@ -81,7 +119,7 @@ async def list_contacts(current_user_id: str = Depends(get_current_user_id)):
         
         # Check if registered user exists (auto-update if registered meanwhile)
         if c.get("phone_number"):
-            registered_user = await db.users.find_one({"phone_number": c["phone_number"]})
+            registered_user = await db.users.find_one(get_phone_search_filter(c["phone_number"]))
             if registered_user:
                 c["registration_status"] = "registered"
                 c["registered_user_id"] = str(registered_user["_id"])
@@ -91,6 +129,16 @@ async def list_contacts(current_user_id: str = Depends(get_current_user_id)):
                 c["about"] = registered_user.get("about", "")
                 c["online_status"] = registered_user.get("online_status", False)
                 c["last_seen"] = registered_user.get("last_seen").isoformat() if registered_user.get("last_seen") else None
+                # Persist updated status in MongoDB
+                if c.get("registration_status") != "registered":
+                    await db.contacts.update_one(
+                        {"_id": c["_id"]},
+                        {"$set": {
+                            "registration_status": "registered",
+                            "registered_user_id": str(registered_user["_id"]),
+                            "phone_number": registered_user.get("phone_number", c["phone_number"])
+                        }}
+                    )
             else:
                 c["registration_status"] = "unregistered"
                 c["registered_user_id"] = None

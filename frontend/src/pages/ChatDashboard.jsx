@@ -337,7 +337,7 @@ export default function ChatDashboard() {
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center select-none">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[var(--accent)] to-purple-500 text-white flex items-center justify-center mb-4 shadow-xl shadow-[var(--accent)]/20 animate-pulse">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[var(--accent)] to-teal-400 text-white flex items-center justify-center mb-4 shadow-xl shadow-[var(--accent)]/20 animate-pulse">
               <Sparkles size={40} />
             </div>
             <h3 className="text-2xl font-black text-[var(--text-primary)]">CONFAB</h3>

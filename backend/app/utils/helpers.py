@@ -4,14 +4,36 @@ from bson import ObjectId
 
 def clean_phone_number(country_code: str, mobile_number: str) -> str:
     """Normalize phone number to international standard E.164-like string."""
-    code = re.sub(r'[^\d+]', '', country_code.strip())
+    code = re.sub(r'[^\d+]', '', (country_code or "+91").strip())
     if not code.startswith('+'):
         code = '+' + code
-    number = re.sub(r'[^\d]', '', mobile_number.strip())
-    # Handle numbers where the user included country code inside the mobile field
-    if number.startswith(code.replace('+', '')):
+    
+    number = re.sub(r'[^\d]', '', (mobile_number or "").strip())
+    # Remove leading 0 if present (common local dialing prefix in India e.g. 09876543210)
+    if number.startswith('0'):
+        number = number.lstrip('0')
+
+    code_digits = code.replace('+', '')
+    if number.startswith(code_digits):
         return '+' + number
     return f"{code}{number}"
+
+def get_phone_search_filter(phone_or_number: str) -> dict:
+    """Create a robust MongoDB query filter that matches a phone number regardless of formatting."""
+    digits = re.sub(r'[^\d]', '', phone_or_number or "")
+    if not digits:
+        return {"phone_number": phone_or_number}
+    
+    last_10 = digits[-10:] if len(digits) >= 10 else digits
+    return {
+        "$or": [
+            {"phone_number": phone_or_number},
+            {"phone_number": f"+{digits}"},
+            {"phone_number": digits},
+            {"phone_number": f"+91{last_10}"},
+            {"phone_number": {"$regex": f"{last_10}$"}}
+        ]
+    }
 
 def validate_phone_number(full_phone: str) -> bool:
     """Check whether phone number matches valid international format."""
